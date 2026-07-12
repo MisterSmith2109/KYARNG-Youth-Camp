@@ -285,9 +285,10 @@
   .btn2:hover{border-color:var(--olive-bright)}
   /* Heat / WBGT flag */
   .heat-wrap{display:flex;gap:16px;flex-wrap:wrap;align-items:stretch}
-  .heat-flag{flex:0 0 160px;min-width:150px;border-radius:8px;border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;justify-content:center;gap:6px}
-  .hf-name{font-family:var(--mono);font-weight:800;font-size:22px;letter-spacing:.1em}
-  .hf-wbgt{font-family:var(--mono);font-weight:800;font-size:34px;line-height:1;font-variant-numeric:tabular-nums}
+  .heat-flag{flex:0 0 178px;min-width:160px;border-radius:8px;border:1px solid var(--line);padding:14px;display:flex;flex-direction:column;justify-content:center;gap:4px}
+  .hf-name{font-family:var(--mono);font-weight:800;font-size:20px;letter-spacing:.06em}
+  .hf-flagword{font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.05em;opacity:.85;margin-bottom:2px}
+  .hf-wbgt{font-family:var(--mono);font-weight:800;font-size:32px;line-height:1;font-variant-numeric:tabular-nums}
   .hf-unit{font-size:12px;font-weight:600;margin-left:6px;opacity:.85}
   .heat-guide{flex:1;min-width:200px;display:flex;flex-direction:column;gap:8px;justify-content:center}
   .hg-row{display:flex;gap:10px;align-items:baseline}
@@ -414,12 +415,13 @@
 
   <!-- HEAT CONDITION -->
   <div class="panel">
-    <div class="panel-head"><h2>Heat Condition &bull; WBGT</h2><span class="hint">flag &amp; guidance</span></div>
+    <div class="panel-head"><h2>Heat Condition &bull; WBGT</h2><span class="hint">category 1&ndash;5 &middot; guidance</span></div>
     <div class="panel-body">
-      <div class="panel-sub">Wet Bulb Globe Temperature sets the heat flag. Enter your meter reading, or pull an estimate from current weather. Always follow your camp medical SOP.</div>
+      <div class="panel-sub">Wet Bulb Globe Temperature sets the heat category (1&ndash;5). Enter your meter reading, or pull an estimate from current weather. Always follow your camp medical SOP.</div>
       <div class="heat-wrap">
         <div class="heat-flag heat-NA" id="heatFlag">
           <div class="hf-name" id="heatName">&mdash; set WBGT &mdash;</div>
+          <div class="hf-flagword" id="heatFlagWord"></div>
           <div class="hf-wbgt"><span id="heatWbgt">--</span><span class="hf-unit">&deg;F WBGT</span></div>
         </div>
         <div class="heat-guide">
@@ -736,21 +738,26 @@
   }
 
   // ---------- heat / WBGT ----------
-  // Flag thresholds (WBGT °F): <80 LOW, 80–84.9 GREEN, 85–87.9 YELLOW, 88–89.9 RED, ≥90 BLACK.
+  // U.S. Army heat categories (TB MED 507), WBGT °F:
+  // <78 below Cat 1; 78–81.9 Cat 1 (Green); 82–84.9 Cat 2 (Yellow); 85–87.9 Cat 3 (Red);
+  // 88–89.9 Cat 4 (Black); ≥90 Cat 5 (Black).
   const HEATCATS={
-    LOW:   {key:"LOW",   name:"LOW",    work:"Normal activities. Keep water available.",                      water:"Drink on regular breaks."},
-    GREEN: {key:"GREEN", name:"GREEN",  work:"Use discretion for intense or prolonged exertion.",             water:"Water break about every 45 min."},
-    YELLOW:{key:"YELLOW",name:"YELLOW", work:"Limit strenuous activity; rest in shade between bouts.",         water:"Water break about every 30 min."},
-    RED:   {key:"RED",   name:"RED",    work:"Curtail strenuous activity; short bouts, mandatory shade rest.", water:"Water break about every 20–30 min."},
-    BLACK: {key:"BLACK", name:"BLACK",  work:"Suspend strenuous outdoor activity; move to shade or A/C.",       water:"Continuous hydration; watch for heat illness."}
+    NA:   {cls:"heat-NA",    name:"— set WBGT —", flag:"",           work:"Enter a WBGT reading (or use the weather estimate) to see the heat category.", water:"—"},
+    BELOW:{cls:"heat-LOW",   name:"BELOW CAT 1",  flag:"Low risk",   work:"Normal activities. Keep water available.",                       water:"Drink on regular breaks."},
+    C1:   {cls:"heat-GREEN", name:"CATEGORY 1",   flag:"Green flag", work:"Use discretion for intense or prolonged exertion.",              water:"Water break about every 45 min."},
+    C2:   {cls:"heat-YELLOW",name:"CATEGORY 2",   flag:"Yellow flag",work:"Limit strenuous activity; rest in shade between bouts.",          water:"Water break about every 30 min."},
+    C3:   {cls:"heat-RED",   name:"CATEGORY 3",   flag:"Red flag",   work:"Curtail strenuous activity; short bouts, mandatory shade rest.",  water:"Water break about every 20–30 min."},
+    C4:   {cls:"heat-BLACK", name:"CATEGORY 4",   flag:"Black flag", work:"Suspend strenuous outdoor activity; move to shade or A/C.",        water:"Continuous hydration; watch for heat illness."},
+    C5:   {cls:"heat-BLACK", name:"CATEGORY 5",   flag:"Black flag", work:"Suspend all outdoor physical activity; move to shade or A/C.",     water:"Continuous hydration; active heat-illness watch."}
   };
   function heatCat(wb){
-    if(wb==null||isNaN(wb)) return {key:"NA",name:"— set WBGT —",work:"Enter a WBGT reading (or use the weather estimate) to see guidance.",water:"—"};
-    if(wb>=90) return HEATCATS.BLACK;
-    if(wb>=88) return HEATCATS.RED;
-    if(wb>=85) return HEATCATS.YELLOW;
-    if(wb>=80) return HEATCATS.GREEN;
-    return HEATCATS.LOW;
+    if(wb==null||isNaN(wb)) return HEATCATS.NA;
+    if(wb>=90) return HEATCATS.C5;
+    if(wb>=88) return HEATCATS.C4;
+    if(wb>=85) return HEATCATS.C3;
+    if(wb>=82) return HEATCATS.C2;
+    if(wb>=78) return HEATCATS.C1;
+    return HEATCATS.BELOW;
   }
   // Shade WBGT estimate from air temp + humidity (BoM approximation). Underestimates in full sun — a meter is better.
   const wxObs={tempC:null, rh:null};
@@ -764,8 +771,9 @@
   function renderHeat(){
     const wb=(state.wbgt==null)?null:(+state.wbgt);
     const cat=heatCat(wb);
-    const flag=$("heatFlag"); if(flag) flag.className="heat-flag heat-"+cat.key;
+    const flag=$("heatFlag"); if(flag) flag.className="heat-flag "+cat.cls;
     if($("heatName")) $("heatName").textContent=cat.name;
+    if($("heatFlagWord")) $("heatFlagWord").textContent=cat.flag;
     if($("heatWbgt")) $("heatWbgt").textContent=(wb==null?"--":Math.round(wb));
     if($("heatWork")) $("heatWork").textContent=cat.work;
     if($("heatWater")) $("heatWater").textContent=cat.water;
@@ -1100,7 +1108,7 @@
     if(wxNow&&wxNow!=="--") L.push("WX (NWS): "+wxTmp+" "+wxNow);
     const alertChips=Array.from(document.querySelectorAll("#wxAlerts .wx-chip")).map(c=>c.textContent).filter(x=>x&&x!=="No active alerts");
     if(alertChips.length) L.push("WX ALERTS: "+alertChips.join(", "));
-    if(state.wbgt!=null){ const c=heatCat(+state.wbgt); L.push("HEAT: "+c.name+" (WBGT "+Math.round(+state.wbgt)+"°F) — "+c.work); }
+    if(state.wbgt!=null){ const c=heatCat(+state.wbgt); L.push("HEAT: "+c.name+" ("+(c.flag?c.flag+", ":"")+"WBGT "+Math.round(+state.wbgt)+"°F) — "+c.work); }
     L.push("");
     L.push(state.volLabel.toUpperCase()+": "+state.vol);
     L.push("INCIDENT REPORTS: "+state.incidents.length+" ("+state.incidents.filter(i=>i.status!=="Closed").length+" open)");
