@@ -30,9 +30,12 @@ it works, online or offline.
 - **Daily Schedule** *(new)* — a full **week × platoon** schedule. Pick a **day**
   (Saturday–Friday), then a **platoon** (Alpha–Hotel), to see that platoon's
   activities for that day. The 2026 camp week is pre-loaded from the schedule
-  workbook. Rename platoons, add/remove platoons, edit any activity, and mark an
-  item **Now** to highlight the current event. On a fresh board it opens to
-  today's day of the week.
+  workbook, with **locations** filled in from the workbook's Locations &
+  Trainers sheet where they could be matched. **Status advances automatically
+  with the clock** — each event reads Upcoming, then Now, then Done as its time
+  passes (the current day of the week runs live; past days read Done, future
+  days Upcoming). Rename, add, and remove platoons; edit any activity. On a fresh
+  board it opens to today's day of the week.
 - **Incident Report Log** — one row per report; log incidents by hand.
 - **Copy SITREP** — one-tap plain-text situation report (accountability, who's
   not signed in, PERSTAT, schedule, incidents) ready to paste into an email or chat.
