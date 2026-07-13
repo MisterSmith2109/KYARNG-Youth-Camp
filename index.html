@@ -294,6 +294,18 @@
   .mini-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:4px;cursor:pointer;
     font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:4px 8px;white-space:nowrap;width:auto}
   .mini-btn:hover{border-color:var(--olive-bright);color:var(--ink)}
+  /* Sensitive items */
+  .si-tools{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+  .si-lastcheck{font-family:var(--mono);font-size:11px;color:var(--muted)}
+  .si-chip{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;padding:4px 10px;border-radius:5px;border:1px solid var(--line-soft);white-space:nowrap}
+  .si-chip.ok{background:var(--green);color:#0f1a0e;border-color:var(--green)}
+  .si-chip.bad{background:var(--red);color:#2a0d08;border-color:var(--red)}
+  .si-chip.none{background:var(--panel-2);color:var(--muted)}
+  .si-status{font-family:var(--mono);font-weight:700;font-size:12px;padding:4px 8px;border-radius:5px;display:inline-block;min-width:104px;text-align:center;border:1px solid var(--line-soft)}
+  .si-ok{background:var(--green);color:#0f1a0e;border-color:var(--green)}
+  .si-short{background:var(--red);color:#2a0d08;border-color:var(--red)}
+  .si-over{background:var(--amber);color:#241a05;border-color:var(--amber)}
+  .si-na{background:var(--panel-2);color:var(--muted)}
   /* small secondary button (weather + heat controls) */
   .btn2{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:8px 12px;cursor:pointer;font-size:12px;white-space:nowrap;width:auto}
   .btn2:hover{border-color:var(--olive-bright)}
@@ -403,7 +415,31 @@
       <div class="t-sub" id="accSub">0 / 0 present</div>
     </div>
   </div>
- 
+
+  <!-- SENSITIVE ITEMS -->
+  <div class="panel" id="siPanel">
+    <div class="panel-head">
+      <h2>Sensitive Items</h2>
+      <div class="head-right">
+        <span class="si-chip" id="siChip"></span>
+      </div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-sub">Signed-out sensitive items and their accountability. On a check, set <b>On Hand</b> to the number physically verified, or press <b>All present</b> to mark every item accounted and stamp the time.</div>
+      <div class="si-tools">
+        <button class="btn2" id="siAllPresent">All present</button>
+        <span class="si-lastcheck" id="siLastCheck"></span>
+      </div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Item</th><th>Signed Out</th><th>On Hand</th><th>Status</th><th></th></tr></thead>
+          <tbody id="siBody"></tbody>
+        </table>
+      </div>
+      <button class="add-btn" id="siAdd">+ Add item</button>
+    </div>
+  </div>
+
   <div class="grid-2">
   <!-- PERSTAT -->
   <div class="panel">
@@ -603,6 +639,7 @@
     ],
     incidents:[],
     feedUrl:"", feedAuto:false, importedKeys:[],
+    sensitive:[{name:"Motorola APX 8000XE", qty:0, oh:0}], siCheck:"",
     roster:[],
     activeDay:0,
     activePlatoon:0,
@@ -614,6 +651,7 @@
   // Merge saved/loaded data over defaults and upgrade older formats to the day×platoon model.
   function migrateState(loaded){
     const st=Object.assign(defaults(), loaded||{});
+    if(!Array.isArray(st.sensitive)) st.sensitive=defaults().sensitive;
     if(!Array.isArray(st.platoons)||!st.platoons.length) st.platoons=defaults().platoons;
     st.platoons.forEach((pl,i)=>{
       if(!pl||typeof pl!=="object"){ st.platoons[i]={name:CAMP_PLATOONS[i]||("Platoon "+(i+1)), sched:emptyWeek()}; return; }
@@ -856,7 +894,62 @@
     $("perPres").textContent=t.pres;
     $("perGap").textContent=t.gap;
   }
- 
+
+  // ---------- render sensitive items ----------
+  function siStatusOf(it){
+    const q=+it.qty||0, oh=+it.oh||0;
+    if(q<=0) return {k:"na", t:"—"};
+    if(oh===q) return {k:"ok", t:"Accounted"};
+    if(oh<q) return {k:"short", t:"SHORT −"+(q-oh)};
+    return {k:"over", t:"Over +"+(oh-q)};
+  }
+  function renderSiSummary(){
+    const withItems=(state.sensitive||[]).filter(it=>(+it.qty||0)>0);
+    const totalQ=withItems.reduce((a,it)=>a+(+it.qty||0),0);
+    const totalOH=withItems.reduce((a,it)=>a+Math.max(0,Math.min(+it.oh||0,+it.qty||0)),0);
+    const allOK=withItems.length>0 && withItems.every(it=>(+it.oh||0)===(+it.qty||0));
+    const anyShort=withItems.some(it=>(+it.oh||0)<(+it.qty||0));
+    const chip=$("siChip");
+    if(chip){
+      if(withItems.length===0){ chip.className="si-chip none"; chip.textContent="no items"; }
+      else if(allOK){ chip.className="si-chip ok"; chip.textContent="ALL ACCOUNTED · "+totalQ; }
+      else { chip.className="si-chip bad"; chip.textContent=(anyShort?"SHORT":"CHECK")+" · "+totalOH+"/"+totalQ; }
+    }
+    const lc=$("siLastCheck"); if(lc) lc.textContent = state.siCheck ? ("last check "+state.siCheck) : "no check logged";
+  }
+  function renderSensitive(){
+    const b=$("siBody"); if(!b) return; b.innerHTML="";
+    const list=state.sensitive||[];
+    if(list.length===0){
+      b.innerHTML='<tr><td colspan="5" class="inc-empty">No sensitive items. Use &ldquo;+ Add item&rdquo;.</td></tr>';
+    }else{
+      list.forEach((it,i)=>{
+        const s=siStatusOf(it);
+        const tr=document.createElement("tr");
+        tr.innerHTML=
+          '<td><input class="row-label" data-si="'+i+'" data-f="name" value="'+esc(it.name)+'" placeholder="Item"></td>'+
+          '<td class="num"><input type="number" min="0" data-si="'+i+'" data-f="qty" value="'+(+it.qty||0)+'"></td>'+
+          '<td class="num"><input type="number" min="0" data-si="'+i+'" data-f="oh" value="'+(+it.oh||0)+'"></td>'+
+          '<td class="num"><span class="si-status si-'+s.k+'">'+s.t+'</span></td>'+
+          '<td><button class="icon-btn" data-delsi="'+i+'" title="Remove">×</button></td>';
+        b.appendChild(tr);
+      });
+    }
+    renderSiSummary();
+  }
+  // Update SI status pills + summary in place (no rebuild) so number typing keeps focus.
+  function refreshSi(){
+    const list=state.sensitive||[];
+    $("siBody").querySelectorAll("tr").forEach(tr=>{
+      const inp=tr.querySelector("[data-si]"); if(!inp) return;
+      const it=list[+inp.dataset.si]; if(!it) return;
+      const s=siStatusOf(it);
+      const pill=tr.querySelector(".si-status");
+      if(pill){ pill.textContent=s.t; pill.className="si-status si-"+s.k; }
+    });
+    renderSiSummary();
+  }
+
   // ---------- render incidents ----------
   function renderInc(){
     const b=$("incBody"); b.innerHTML="";
@@ -1028,7 +1121,7 @@
     });
   }
 
-  function renderAll(){ renderTiles(); renderPer(); renderInc(); renderRoster(); renderDtabs(); renderPtabs(); renderSchedule(); renderHeat(); }
+  function renderAll(){ renderTiles(); renderPer(); renderSensitive(); renderInc(); renderRoster(); renderDtabs(); renderPtabs(); renderSchedule(); renderHeat(); }
  
   // ---------- events ----------
   // header + tile fields
@@ -1043,6 +1136,7 @@
     else if(t.dataset.inc!=null){ state.incidents[+t.dataset.inc][t.dataset.f]=t.value; save(); }
     else if(t.dataset.ros!=null){ state.roster[+t.dataset.ros][t.dataset.f]=t.value; save(); }
     else if(t.dataset.sch!=null){ const s=curSched(); if(s&&s[+t.dataset.sch]) s[+t.dataset.sch][t.dataset.f]=t.value; if(t.dataset.f==="time") refreshSchedStatuses(); save(); }
+    else if(t.dataset.si!=null){ const it=state.sensitive[+t.dataset.si]; const f=t.dataset.f; it[f]=(f==="name")?t.value:(+t.value||0); if(f!=="name") refreshSi(); save(); }
   });
   document.body.addEventListener("change",e=>{
     const t=e.target;
@@ -1053,6 +1147,7 @@
     const t=e.target;
     if(t.dataset.delper!=null){ state.perstat.splice(+t.dataset.delper,1); renderPer(); renderTiles(); save(); }
     else if(t.dataset.delinc!=null){ state.incidents.splice(+t.dataset.delinc,1); renderInc(); renderTiles(); save(); }
+    else if(t.dataset.delsi!=null){ state.sensitive.splice(+t.dataset.delsi,1); renderSensitive(); save(); }
     else if(t.dataset.delros!=null){ state.roster.splice(+t.dataset.delros,1); renderRoster(); renderTiles(); save(); }
     else if(t.dataset.delsch!=null){ const s=curSched(); if(s) s.splice(+t.dataset.delsch,1); renderSchedule(); save(); }
     else if(t.dataset.cancelsch!=null){ const s=curSched(); if(s&&s[+t.dataset.cancelsch]){ const r=s[+t.dataset.cancelsch]; r.canceled=!r.canceled; } renderSchedule(); save(); }
@@ -1061,6 +1156,8 @@
     else if(t.dataset.ptab!=null){ state.activePlatoon=+t.dataset.ptab; renderPtabs(); renderSchedule(); save(); }
   });
   $("addPer").addEventListener("click",()=>{ state.perstat.push({label:"New element",asg:0,pres:0}); renderPer(); renderTiles(); save(); });
+  $("siAdd").addEventListener("click",()=>{ state.sensitive.push({name:"",qty:0,oh:0}); renderSensitive(); save(); });
+  $("siAllPresent").addEventListener("click",()=>{ (state.sensitive||[]).forEach(it=>{ it.oh=(+it.qty||0); }); state.siCheck=nowDTG(); renderSensitive(); save(); });
   $("addInc").addEventListener("click",()=>{
     const d=new Date();
     state.incidents.push({time:pad(d.getUTCDate())+pad(d.getUTCHours())+pad(d.getUTCMinutes())+"Z",type:"",remarks:"",status:"Open"});
@@ -1228,6 +1325,13 @@
     L.push(state.volLabel.toUpperCase()+": "+state.vol);
     L.push("INCIDENT REPORTS: "+state.incidents.length+" ("+state.incidents.filter(i=>i.status!=="Closed").length+" open)");
     L.push(state.gsaLabel.toUpperCase()+": "+state.gsa);
+    const siWith=(state.sensitive||[]).filter(it=>(+it.qty||0)>0);
+    if(siWith.length){
+      const siOK=siWith.every(it=>(+it.oh||0)===(+it.qty||0));
+      const siQ=siWith.reduce((a,it)=>a+(+it.qty||0),0);
+      L.push("SENSITIVE ITEMS: "+(siOK?"ALL ACCOUNTED ("+siQ+")":"DISCREPANCY")+(state.siCheck?" · last check "+state.siCheck:""));
+      if(!siOK) siWith.filter(it=>(+it.oh||0)!==(+it.qty||0)).forEach(it=>L.push("  "+(it.name||"item")+": "+(+it.oh||0)+"/"+(+it.qty||0)+" on hand"));
+    }
     if((state.roster||[]).length>0){ const rc=rosterCounts(); L.push("ACCOUNTABILITY: "+rc.in+"/"+rc.accountable+(rc.pct===null?"":" ("+rc.pct+"%)")+(rc.absent?" · "+rc.absent+" absent":"")); }
     else L.push("ACCOUNTABILITY: "+t.pres+"/"+t.asg+(t.pct===null?"":" ("+t.pct+"%)"));
     L.push("");
