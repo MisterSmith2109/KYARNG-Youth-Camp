@@ -577,21 +577,6 @@
   </div>
   </div>
 
-  <!-- HEAT CASUALTIES -->
-  <div class="panel" id="hcPanel">
-    <div class="panel-head"><h2>Heat Casualties</h2><div class="head-right"><span class="si-chip" id="hcChip"></span></div></div>
-    <div class="panel-body">
-      <div class="hc-emg"><b>Heat stroke is a medical emergency.</b> Hot skin + confusion, staggering, or collapse &rarr; call <b>911</b>, cool the camper immediately (shade, water, ice to neck/armpits/groin), and notify camp medical. Log every heat case here as it happens.</div>
-      <div class="tbl-scroll">
-        <table>
-          <thead><tr><th>Time</th><th>Name</th><th>Type</th><th>Action / disposition</th><th></th></tr></thead>
-          <tbody id="hcBody"></tbody>
-        </table>
-      </div>
-      <button class="add-btn" id="hcAdd">+ Log heat casualty</button>
-    </div>
-  </div>
-
   <!-- DAILY SCHEDULE -->
   <div class="panel">
     <div class="panel-head">
@@ -699,6 +684,21 @@
       </div>
       <div id="incBody"></div>
       <button class="add-btn" id="addInc">+ Log incident</button>
+    </div>
+  </div>
+
+  <!-- HEAT CASUALTIES -->
+  <div class="panel" id="hcPanel">
+    <div class="panel-head"><h2>Heat Casualties</h2><div class="head-right"><span class="si-chip" id="hcChip"></span></div></div>
+    <div class="panel-body">
+      <div class="hc-emg"><b>Heat stroke is a medical emergency.</b> Hot skin + confusion, staggering, or collapse &rarr; call <b>911</b>, cool the camper immediately (shade, water, ice to neck/armpits/groin), and notify camp medical. Log every heat case here as it happens.</div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Name</th><th>Type</th><th>Action / disposition</th><th></th></tr></thead>
+          <tbody id="hcBody"></tbody>
+        </table>
+      </div>
+      <button class="add-btn" id="hcAdd">+ Log heat casualty</button>
     </div>
   </div>
 
@@ -909,7 +909,7 @@
     const keepDay=state.activeDay, keepPlat=state.activePlatoon; // day/platoon selection stays per-device
     state=migrateState(board);
     if(typeof keepDay==="number" && keepDay>=0 && keepDay<CAMP_DAYS.length) state.activeDay=keepDay;
-    state.activePlatoon=(typeof keepPlat==="number" && keepPlat>=0 && keepPlat<state.platoons.length)?keepPlat:0;
+    state.activePlatoon=(typeof keepPlat==="number" && keepPlat>=-1 && keepPlat<state.platoons.length)?keepPlat:-1; // -1 = All (don't snap to Alpha on sync)
     hydrateInputs(); renderAll();
     try{ localStorage.setItem(KEY, JSON.stringify(state)); }catch(e){}
     syncApplying=false;
@@ -2161,6 +2161,7 @@
     state=migrateState(loaded);
     // on a fresh board, open the schedule to today's day of the week
     if(!loaded){ const idx=todayIndex(); if(idx>=0&&idx<CAMP_DAYS.length) state.activeDay=idx; }
+    state.activePlatoon=-1; // the schedule always opens on the All view; switch to a platoon anytime
     hydrateInputs();
     renderAll();
     setupCollapsibles();
