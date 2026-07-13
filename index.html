@@ -407,8 +407,9 @@
   <!-- GLANCE TILES -->
   <div class="tiles">
     <div class="tile" id="tileVol">
-      <input class="t-label" id="lblVol" value="Volunteers" aria-label="Tile 1 label">
-      <input class="t-val" id="valVol" type="number" min="0" value="0" inputmode="numeric">
+      <span class="t-label">On Ground</span>
+      <div class="t-val" id="valOG">0</div>
+      <div class="t-sub" id="ogSub">present</div>
     </div>
     <div class="tile" id="tileInc">
       <span class="t-label">Incident Reports</span>
@@ -455,9 +456,9 @@
   <div class="panel">
     <div class="panel-head"><h2>PERSTAT</h2><span class="hint">assigned &rarr; present</span></div>
     <div class="panel-body">
-      <div class="panel-sub">Auto-summarized from the <b>Roster</b> by role. <b>ASG</b> = people on the roster with that role; <b>O/G</b> (on ground) = how many are signed <b>In</b>; Gap = the rest (out or absent).</div>
+      <div class="panel-sub">Auto-summarized from the <b>Roster</b>. <b>Assigned</b> = people on the roster in that group; <b>Present</b> = how many are signed <b>In</b>; Gap = the rest (out or absent).</div>
       <table>
-        <thead><tr><th>Role</th><th>ASG</th><th>O/G</th><th>Gap</th></tr></thead>
+        <thead><tr><th>Group</th><th>Assigned</th><th>Present</th><th>Gap</th></tr></thead>
         <tbody id="perBody"></tbody>
         <tbody>
           <tr class="total">
@@ -874,11 +875,12 @@
 
   // ---------- render tiles ----------
   function renderTiles(){
-    $("valVol").value=state.vol;
-    $("lblVol").value=state.volLabel;
+    const pt=perstatTotals();
+    if($("valOG")) $("valOG").textContent=pt.pres;
+    if($("ogSub")) $("ogSub").textContent=pt.pres+" / "+pt.asg+" present";
     $("valGsa").value=state.gsa;
     $("lblGsa").value=state.gsaLabel;
- 
+
     const openInc=state.incidents.filter(i=>i.status!=="Closed").length;
     $("valInc").textContent=state.incidents.length;
     $("incSub").textContent=openInc+" open";
@@ -902,32 +904,39 @@
     if(pct!==null){ if(pct>=100) acc.classList.add("good"); else if(alertGap) acc.classList.add("alert"); }
   }
  
-  // ---------- render PERSTAT (auto-summarized from the roster by role) ----------
-  const PERSTAT_ROLES=["Camper","Staff","Volunteer","Cadre","Support"];
+  // ---------- render PERSTAT (auto-summarized from the roster, grouped) ----------
+  const PERSTAT_GROUPS=[
+    {label:"Campers",              roles:["Camper"]},
+    {label:"Staff / Support",      roles:["Staff","Support","Cadre"]},
+    {label:"Volunteers (PSG/APSG)",roles:["PSG","APSG","Volunteer"]}
+  ];
+  function perstatGroupCounts(g){
+    const roster=state.roster||[];
+    const inGroup=r=>g.roles.indexOf(r.role)>-1;
+    const asg=roster.filter(inGroup).length;
+    const pres=roster.filter(r=>inGroup(r) && r.status==="In").length;
+    return {asg:asg, pres:pres, gap:asg-pres};
+  }
+  function perstatTotals(){
+    let asg=0,pres=0;
+    PERSTAT_GROUPS.forEach(g=>{ const c=perstatGroupCounts(g); asg+=c.asg; pres+=c.pres; });
+    return {asg:asg, pres:pres, gap:asg-pres};
+  }
   function renderPer(){
     const b=$("perBody"); b.innerHTML="";
-    const roster=state.roster||[];
-    const present={}; roster.forEach(r=>{ const role=(r.role||"\u2014"); present[role]=true; });
-    const roles=PERSTAT_ROLES.filter(r=>present[r]).concat(Object.keys(present).filter(r=>PERSTAT_ROLES.indexOf(r)<0));
-    let tA=0,tG=0;
-    if(roles.length===0){
-      b.innerHTML='<tr><td colspan="4" class="inc-empty">Add people to the Roster to populate PERSTAT.</td></tr>';
-    }else{
-      roles.forEach(role=>{
-        const asg=roster.filter(r=>(r.role||"\u2014")===role).length;
-        const og=roster.filter(r=>(r.role||"\u2014")===role && r.status==="In").length;
-        const gap=asg-og; tA+=asg; tG+=og;
-        const tr=document.createElement("tr");
-        tr.innerHTML='<td class="row-label">'+esc(role)+'</td>'+
-          '<td class="calc">'+asg+'</td>'+
-          '<td class="calc">'+og+'</td>'+
-          '<td class="calc">'+gap+'</td>';
-        b.appendChild(tr);
-      });
-    }
-    $("perAsg").textContent=tA;
-    $("perPres").textContent=tG;
-    $("perGap").textContent=(tA-tG);
+    PERSTAT_GROUPS.forEach(g=>{
+      const c=perstatGroupCounts(g);
+      const tr=document.createElement("tr");
+      tr.innerHTML='<td class="row-label">'+esc(g.label)+'</td>'+
+        '<td class="calc">'+c.asg+'</td>'+
+        '<td class="calc">'+c.pres+'</td>'+
+        '<td class="calc">'+c.gap+'</td>';
+      b.appendChild(tr);
+    });
+    const t=perstatTotals();
+    $("perAsg").textContent=t.asg;
+    $("perPres").textContent=t.pres;
+    $("perGap").textContent=t.gap;
   }
 
   // ---------- render sensitive items ----------
@@ -1007,7 +1016,7 @@
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
  
   // ---------- render roster ----------
-  const ROLES=["Camper","Staff","Volunteer","Cadre","Support"];
+  const ROLES=["Camper","Staff","Support","PSG","APSG"];
   const STATUS_RANK={In:0,Out:1,Absent:2};
   // Returns roster rows in the chosen display order, keeping each row's original index (for editing).
   function rosterSorted(){
@@ -1216,7 +1225,7 @@
   // header + tile fields
   const bind=(id,key,num)=>{ $(id).addEventListener("input",e=>{ state[key]=num?(+e.target.value||0):e.target.value; if(num||key.indexOf("Label")>-1) renderTiles(); save(); }); };
   bind("campName","campName"); bind("mDay","day"); bind("mOic","oic"); bind("mNco","nco"); bind("mWx","wx");
-  bind("valVol","vol",true); bind("lblVol","volLabel"); bind("valGsa","gsa",true); bind("lblGsa","gsaLabel");
+  bind("valGsa","gsa",true); bind("lblGsa","gsaLabel");
  
   // delegated table edits
   document.body.addEventListener("input",e=>{
@@ -1409,7 +1418,7 @@
     if(alertChips.length) L.push("WX ALERTS: "+alertChips.join(", "));
     if(state.wbgt!=null){ const c=heatCat(+state.wbgt); L.push("HEAT: "+c.name+" ("+(c.flag?c.flag+", ":"")+"WBGT "+Math.round(+state.wbgt)+"°F) — "+c.work); }
     L.push("");
-    L.push(state.volLabel.toUpperCase()+": "+state.vol);
+    { const pt=perstatTotals(); L.push("ON GROUND: "+pt.pres+" / "+pt.asg); }
     L.push("INCIDENT REPORTS: "+state.incidents.length+" ("+state.incidents.filter(i=>i.status!=="Closed").length+" open)");
     L.push(state.gsaLabel.toUpperCase()+": "+state.gsa);
     const siWith=(state.sensitive||[]).filter(it=>(+it.qty||0)>0);
@@ -1423,7 +1432,7 @@
     else L.push("ACCOUNTABILITY: "+t.pres+"/"+t.asg+(t.pct===null?"":" ("+t.pct+"%)"));
     L.push("");
     L.push("PERSTAT");
-    state.perstat.forEach(r=>L.push("  "+r.label.padEnd(20)+" "+String(r.asg||0).padStart(4)+" ASG  "+String(r.pres||0).padStart(4)+" PRES  ("+((+r.asg||0)-(+r.pres||0))+" gap)"));
+    PERSTAT_GROUPS.forEach(g=>{ const c=perstatGroupCounts(g); L.push("  "+g.label.padEnd(22)+" "+String(c.asg).padStart(3)+" ASG  "+String(c.pres).padStart(3)+" PRES  ("+c.gap+" gap)"); });
     if((state.roster||[]).length){
       const notIn=state.roster.filter(r=>r.status!=="In");
       if(notIn.length){
