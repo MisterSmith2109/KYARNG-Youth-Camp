@@ -287,6 +287,13 @@
   .sch-Now{color:#0f1a0e;background:var(--olive-bright);border-color:var(--olive-bright)}
   .sch-Done{color:var(--muted);background:var(--panel-2);border-color:var(--line-soft)}
   .sch-Upcoming{color:var(--ink);background:var(--panel-2);border-color:var(--line-soft)}
+  .sch-Canceled{color:var(--red);background:var(--panel-2);border-color:var(--red);text-decoration:line-through}
+  .canceled-row .row-label{text-decoration:line-through;color:var(--muted)}
+  .canceled-row td{opacity:.72}
+  .sch-actions{white-space:nowrap;display:flex;gap:6px;align-items:center;justify-content:flex-end}
+  .mini-btn{background:var(--panel-2);border:1px solid var(--line);color:var(--muted);border-radius:4px;cursor:pointer;
+    font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:4px 8px;white-space:nowrap;width:auto}
+  .mini-btn:hover{border-color:var(--olive-bright);color:var(--ink)}
   /* small secondary button (weather + heat controls) */
   .btn2{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);border-radius:5px;padding:8px 12px;cursor:pointer;font-size:12px;white-space:nowrap;width:auto}
   .btn2:hover{border-color:var(--olive-bright)}
@@ -931,6 +938,7 @@
   function todayIndex(){ return campNow().dayIdx; } // CAMP_DAYS starts Saturday, in camp time
   // Status of a schedule row for the currently selected day, from the live clock.
   function schStatus(row){
+    if(row&&row.canceled) return "Canceled"; // manual override wins over the clock
     const sel=state.activeDay||0, today=todayIndex();
     if(sel<today) return "Done";
     if(sel>today) return "Upcoming";
@@ -992,13 +1000,14 @@
       list.forEach((r,i)=>{
         const st=schStatus(r);
         const tr=document.createElement("tr");
-        if(st==="Now") tr.className="now-row";
+        tr.className = st==="Now" ? "now-row" : (st==="Canceled" ? "canceled-row" : "");
         tr.innerHTML=
           '<td class="num"><input data-sch="'+i+'" data-f="time" value="'+esc(r.time)+'" placeholder="0900"></td>'+
           '<td><input class="row-label" data-sch="'+i+'" data-f="activity" value="'+esc(r.activity)+'" placeholder="Activity"></td>'+
           '<td><input data-sch="'+i+'" data-f="loc" value="'+esc(r.loc)+'" placeholder="Location"></td>'+
           '<td class="num"><span class="status-pill sch-'+st+'">'+st+'</span></td>'+
-          '<td><button class="icon-btn" data-delsch="'+i+'" title="Remove">×</button></td>';
+          '<td class="sch-actions"><button class="mini-btn" data-cancelsch="'+i+'" title="Cancel or restore this event">'+(r.canceled?"Restore":"Cancel")+'</button>'+
+            '<button class="icon-btn" data-delsch="'+i+'" title="Remove">×</button></td>';
         b.appendChild(tr);
       });
     }
@@ -1013,6 +1022,7 @@
       const r=list[+inp.dataset.sch]; if(!r) return;
       const st=schStatus(r);
       tr.classList.toggle("now-row", st==="Now");
+      tr.classList.toggle("canceled-row", st==="Canceled");
       const pill=tr.querySelector(".status-pill");
       if(pill){ pill.textContent=st; pill.className="status-pill sch-"+st; }
     });
@@ -1045,6 +1055,7 @@
     else if(t.dataset.delinc!=null){ state.incidents.splice(+t.dataset.delinc,1); renderInc(); renderTiles(); save(); }
     else if(t.dataset.delros!=null){ state.roster.splice(+t.dataset.delros,1); renderRoster(); renderTiles(); save(); }
     else if(t.dataset.delsch!=null){ const s=curSched(); if(s) s.splice(+t.dataset.delsch,1); renderSchedule(); save(); }
+    else if(t.dataset.cancelsch!=null){ const s=curSched(); if(s&&s[+t.dataset.cancelsch]){ const r=s[+t.dataset.cancelsch]; r.canceled=!r.canceled; } renderSchedule(); save(); }
     else if(t.dataset.signros!=null){ const r=state.roster[+t.dataset.signros]; r.status=(r.status==="In")?"Out":"In"; r.last=nowDTG(); renderRoster(); renderTiles(); save(); }
     else if(t.dataset.dtab!=null){ state.activeDay=+t.dataset.dtab; renderDtabs(); renderSchedule(); save(); }
     else if(t.dataset.ptab!=null){ state.activePlatoon=+t.dataset.ptab; renderPtabs(); renderSchedule(); save(); }
