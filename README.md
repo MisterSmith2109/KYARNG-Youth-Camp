@@ -100,8 +100,12 @@ from a phone, not just a laptop or wall display.
   optional work/rest timer), a one-tap **Report to TOC** (your incident form),
   **Call TOC**, and **Supply Request** (a quick form — item, quantity, priority —
   that lands in the TOC's Supply Requests panel), plus any **announcement** the TOC
-  broadcasts. The phones are read-only apart from sending supply requests — a phone
-  can only *add* a request, never change anything else on the board. Set the
+  broadcasts. After sending a request the PSG sees it in a **My supply requests**
+  list on their phone — their own confirmation of what they sent — and each one
+  shows a live status (**Sent → Open → Filled**) as the TOC works it, so they know
+  when it's been handled without calling in. The phones are read-only apart from
+  sending supply requests — a phone can only *add* a request, never change anything
+  else on the board. Set the
   announcement, incident form
   link, and TOC phone number in the **Field / PSG Broadcast** panel on the main
   board, which also shows a **QR code and "Copy PSG link"** — a PSG scans the code

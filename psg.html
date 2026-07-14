@@ -81,6 +81,20 @@
   .abtn.call{background:#10231a;border-color:var(--green);color:#cdeccd}
   .abtn.supply{grid-column:1/-1;background:#16202b;border-color:#5a7d8c;color:#cfe3ef}
   .abtn.disabled{opacity:.4;pointer-events:none}
+  /* My supply requests (local history + live status) */
+  .myreq{padding:12px 14px}
+  .mr-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+  .mr-clear{background:none;border:none;color:var(--muted);text-decoration:underline;font-size:12px;padding:4px 2px}
+  .mr-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line-soft)}
+  .mr-row:first-child{border-top:none}
+  .mr-main{flex:1;min-width:0}
+  .mr-item{font-size:15px;font-weight:600}
+  .mr-meta{font-size:12px;color:var(--muted);font-family:var(--mono)}
+  .mr-pri-urgent{color:var(--red);font-weight:700}
+  .mr-status{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 9px;border-radius:20px;white-space:nowrap;flex:none}
+  .mr-status.open{background:var(--panel-2);color:var(--amber);border:1px solid var(--line)}
+  .mr-status.filled{background:var(--green);color:#0f1a0e}
+  .mr-status.sent{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#0f1a0e;font-weight:700;
     padding:11px 18px;border-radius:10px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
   .toast.show{opacity:1}
@@ -173,6 +187,11 @@
     <button class="abtn supply" id="btnSupply"><span class="ico">📦</span>Supply Request</button>
   </div>
 
+  <div class="card myreq hide" id="myReqCard">
+    <div class="mr-head"><span class="k">My supply requests</span><button class="mr-clear" id="mrClear">clear</button></div>
+    <div id="myReqList"></div>
+  </div>
+
   <details class="today">
     <summary><span>Rest of today</span><span class="chev">tap to expand ▾</span></summary>
     <div class="sched-list" id="schedList"></div>
@@ -233,7 +252,7 @@
 <script>
 (function(){
   var $=function(id){return document.getElementById(id);};
-  var LS_URL="kyarng-psg-url", LS_PLT="kyarng-psg-platoon", LS_WR="kyarng-psg-wr";
+  var LS_URL="kyarng-psg-url", LS_PLT="kyarng-psg-platoon", LS_WR="kyarng-psg-wr", LS_SENT="kyarng-psg-sent";
   var CAMP_TZ="America/Chicago";
   var CAMP_DAYS=["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
   var WEEKDAY_IDX={Sat:0,Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6};
@@ -386,6 +405,7 @@
     var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m);
     $("updated").textContent="updated "+pad(c.h)+":"+pad(c.m)+" CT";
     renderWR();
+    renderSent(); // refresh my-requests live status against the freshly pulled board
     // if the setup sheet is open, refresh the platoon list now that we have the board
     if(!$("setup").classList.contains("hide")) fillSetupPlatoons();
   }
@@ -444,6 +464,46 @@
   $("btnSettings").addEventListener("click",function(){ openSetup(false); });
   $("wrBtn").addEventListener("click",function(){ if(wr.running) wrStop(); else wrStart(); });
 
+  // ---------- my supply requests (local history + live status) ----------
+  // Kept on THIS phone so the PSG has a record of what they sent, and can see it
+  // move Sent -> Open -> Filled as the TOC works it. Read from localStorage; the
+  // live status is cross-referenced against the shared board by request id.
+  function loadSent(){ try{ var a=JSON.parse(localStorage.getItem(LS_SENT)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function saveSent(a){ try{ localStorage.setItem(LS_SENT, JSON.stringify(a||[])); }catch(e){} }
+  function addSent(rec){
+    var a=loadSent();
+    a.push({id:rec.id, platoon:rec.platoon, item:rec.item, qty:rec.qty, priority:rec.priority, notes:rec.notes, time:rec.time, sent:rec._m});
+    if(a.length>50) a=a.slice(a.length-50); // keep it short on the phone
+    saveSent(a);
+    renderSent();
+  }
+  function renderSent(){
+    var card=$("myReqCard"), list=$("myReqList"); if(!card||!list) return;
+    var mine=loadSent().filter(function(r){ return r && (!state.platoon || !r.platoon || r.platoon===state.platoon); });
+    if(!mine.length){ card.classList.add("hide"); list.innerHTML=""; return; }
+    card.classList.remove("hide");
+    // index the board's requests by id so we can show live Sent/Open/Filled
+    var byId={}, srv=(state.board&&Array.isArray(state.board.supplyRequests))?state.board.supplyRequests:[];
+    srv.forEach(function(r){ if(r&&r.id!=null) byId[r.id]=r; });
+    list.innerHTML="";
+    mine.slice().reverse().forEach(function(r){
+      var on=byId[r.id], statusCls, statusTxt;
+      if(!on){ statusCls="sent"; statusTxt="SENT"; }
+      else if(String(on.status).toLowerCase()==="filled"){ statusCls="filled"; statusTxt="FILLED"; }
+      else { statusCls="open"; statusTxt="OPEN"; }
+      var t=r.time&&/^\d{4}$/.test(r.time)?(r.time.slice(0,2)+":"+r.time.slice(2,4)):(r.time||"");
+      var pri=(r.priority||"Routine");
+      var meta=[t, pri].filter(Boolean).join(" · ");
+      var d=document.createElement("div"); d.className="mr-row";
+      d.innerHTML='<div class="mr-main"><div class="mr-item">'+esc(r.item||"—")+
+        (r.qty?' <span class="muted">×'+esc(r.qty)+'</span>':'')+'</div>'+
+        '<div class="mr-meta'+(pri==="Urgent"?" mr-pri-urgent":"")+'">'+esc(meta)+'</div></div>'+
+        '<span class="mr-status '+statusCls+'">'+statusTxt+'</span>';
+      list.appendChild(d);
+    });
+  }
+  $("mrClear").addEventListener("click",function(){ saveSent([]); renderSent(); });
+
   // ---------- supply request (the one thing the phone SENDS) ----------
   var toastTimer=null;
   function toast(msg,err){ var t=$("toast"); if(!t) return; t.textContent=msg; t.className="toast show"+(err?" err":""); clearTimeout(toastTimer); toastTimer=setTimeout(function(){ t.className="toast"+(err?" err":""); },2800); }
@@ -463,18 +523,20 @@
     var board=JSON.parse(JSON.stringify(state.board));
     if(!Array.isArray(board.supplyRequests)) board.supplyRequests=[];
     var now=Date.now(), c=campNow();
-    board.supplyRequests.push({
+    var rec={
       id:"sr"+now.toString(36)+Math.random().toString(36).slice(2,6),
       platoon:state.platoon||"", item:item, qty:$("supQty").value.trim(),
       priority:$("supPri").value||"Routine", notes:$("supNotes").value.trim(),
       time:pad(c.h)+pad(c.m), status:"Open", _m:now
-    });
+    };
+    board.supplyRequests.push(rec);
     try{
       fetch(state.url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(board)})
         .then(function(){ toast("Supply request sent to TOC ✓"); })
         .catch(function(){ toast("Send failed — check signal and retry.",true); });
     }catch(e){ toast("Send failed — check signal and retry.",true); }
     state.board=board; // optimistic local copy
+    addSent(rec);      // record it in this phone's history so the PSG has confirmation
     closeSupply();
     $("supItem").value=""; $("supQty").value=""; $("supNotes").value=""; $("supPri").value="Routine";
     $("supItem").style.borderColor="";
