@@ -95,6 +95,15 @@
   .mr-status.open{background:var(--panel-2);color:var(--amber);border:1px solid var(--line)}
   .mr-status.filled{background:var(--green);color:#0f1a0e}
   .mr-status.sent{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+  .mr-status.pending{background:var(--panel-2);color:var(--amber);border:1px dashed var(--line)}
+  /* report sheet: incident / heat casualty */
+  .seg{display:flex;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:14px}
+  .seg-b{flex:1;background:none;border:none;color:var(--muted);font-weight:700;padding:9px 8px;border-radius:7px;min-height:40px}
+  .seg-b.on{background:var(--olive);color:#12140e}
+  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:-4px 0 12px}
+  .chip{background:var(--panel-2);border:1px solid var(--line);color:var(--ink);font-size:13px;padding:6px 11px;border-radius:16px;min-height:36px}
+  .chip:active{background:var(--line-soft)}
+  .hs-warn{background:var(--red);color:#2a0d08;font-weight:700;font-size:13px;padding:10px 12px;border-radius:9px;margin-bottom:12px}
   .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--green);color:#0f1a0e;font-weight:700;
     padding:11px 18px;border-radius:10px;z-index:60;opacity:0;transition:opacity .2s;pointer-events:none;max-width:90%;text-align:center}
   .toast.show{opacity:1}
@@ -182,7 +191,7 @@
   </div>
 
   <div class="actions">
-    <a class="abtn report disabled" id="btnReport" target="_blank" rel="noopener"><span class="ico">📝</span>Report to TOC</a>
+    <button class="abtn report" id="btnReport"><span class="ico">📝</span>Report to TOC</button>
     <a class="abtn call disabled" id="btnCall"><span class="ico">📞</span>Call TOC</a>
     <button class="abtn supply" id="btnSupply"><span class="ico">📦</span>Supply Request</button>
   </div>
@@ -207,7 +216,7 @@
 <div class="overlay hide" id="setup">
   <div class="sheet">
     <h1 id="setupTitle">PSG Field View</h1>
-    <p>Set your platoon and paste the camp sync link (ask the TOC for it). Your phone only <b>reads</b> the board and <b>sends supply requests</b> — it can't change anything else.</p>
+    <p>Set your platoon and paste the camp sync link (ask the TOC for it). Your phone only <b>reads</b> the board and <b>sends supply requests and reports</b> — it can't change anything else.</p>
     <div class="field">
       <label>Your platoon</label>
       <select id="setPlt"></select>
@@ -247,12 +256,58 @@
   </div>
 </div>
 
+<!-- report to TOC sheet (incident / heat casualty) -->
+<div class="overlay hide" id="report">
+  <div class="sheet">
+    <h1>Report to TOC</h1>
+    <p>From <b id="repPlt">—</b>. It lands on the TOC board within a few seconds.</p>
+    <div class="seg">
+      <button class="seg-b on" id="repTabInc" type="button">Incident</button>
+      <button class="seg-b" id="repTabHeat" type="button">Heat casualty</button>
+    </div>
+
+    <div id="repInc">
+      <div class="field">
+        <label>What happened</label>
+        <input id="repIncType" placeholder="e.g. sprained ankle, camper ill">
+      </div>
+      <div class="chips" id="repIncChips"></div>
+      <div class="field">
+        <label>Details / action taken</label>
+        <input id="repIncRemarks" placeholder="where, who, what you did">
+      </div>
+    </div>
+
+    <div id="repHeat" class="hide">
+      <div class="field">
+        <label>Name</label>
+        <input id="repHeatName" placeholder="camper / staff name">
+      </div>
+      <div class="field">
+        <label>Type</label>
+        <select id="repHeatType"><option>Heat cramps</option><option selected>Heat exhaustion</option><option>Heat stroke</option><option>Other / precaution</option></select>
+      </div>
+      <div class="field">
+        <label>Action taken</label>
+        <input id="repHeatAction" placeholder="cooled, water, medic notified, 911…">
+      </div>
+      <div class="hs-warn hide" id="repHsWarn">HEAT STROKE is a medical emergency — call 911 / camp medical now, then cool aggressively.</div>
+    </div>
+
+    <button class="primary" id="repSend">Send to TOC</button>
+    <div style="text-align:center"><button class="linkbtn" id="repCancel">Cancel</button></div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
 (function(){
   var $=function(id){return document.getElementById(id);};
-  var LS_URL="kyarng-psg-url", LS_PLT="kyarng-psg-platoon", LS_WR="kyarng-psg-wr", LS_SENT="kyarng-psg-sent";
+  var LS_URL="kyarng-psg-url", LS_PLT="kyarng-psg-platoon", LS_WR="kyarng-psg-wr", LS_SENT="kyarng-psg-sent",
+      LS_OUTBOX="kyarng-psg-outbox", LS_BOARD="kyarng-psg-board";
+  var HC_TYPES=["Heat cramps","Heat exhaustion","Heat stroke","Other / precaution"]; // must match index.html
+  var INC_QUICK=["Injury","Illness","Missing camper","Behavior","Dehydration","Other"];
   var CAMP_TZ="America/Chicago";
   var CAMP_DAYS=["Saturday","Sunday","Monday","Tuesday","Wednesday","Thursday","Friday"];
   var WEEKDAY_IDX={Sat:0,Sun:1,Mon:2,Tue:3,Wed:4,Thu:5,Fri:6};
@@ -294,29 +349,85 @@
 
   var state={ board:null, rev:-1, url:"", platoon:"", online:false };
 
+  // Keep the last board we saw so the page still works with no signal (schedule, heat, and
+  // queuing reports/requests all need a board to build from).
+  function saveBoardCache(){ try{ if(state.board) localStorage.setItem(LS_BOARD, JSON.stringify({rev:state.rev,board:state.board})); }catch(e){} }
+  function restoreBoardCache(){ try{ var o=JSON.parse(localStorage.getItem(LS_BOARD)||"null"); if(o&&o.board){ state.board=o.board; state.rev=+(o.rev||0); } }catch(e){} }
+
   // ---------- data pull (READ-ONLY) ----------
   var pollTimer=null;
   function connect(){
     state.url=""; try{ state.url=localStorage.getItem(LS_URL)||""; }catch(e){}
     try{ state.platoon=localStorage.getItem(LS_PLT)||""; }catch(e){}
+    restoreBoardCache(); // show last-known board immediately, even before the first fetch returns
     // As long as we have a sync link, start pulling the board — even before a platoon is picked —
     // so the setup dropdown can show the real platoon list (including HQ / custom platoons).
-    if(state.url){ render(); pull(); clearInterval(pollTimer); pollTimer=setInterval(pull,12000); }
+    if(state.url){ render(); pull(); flushOutbox(); clearInterval(pollTimer); pollTimer=setInterval(pull,12000); }
     if(!state.url||!state.platoon){ openSetup(true); }
   }
   function pull(){
     if(!state.url){ return; }
     fetch(state.url,{method:"GET"}).then(function(r){return r.text();}).then(function(txt){
       var env=null; try{ env=JSON.parse(txt); }catch(e){}
-      if(env && env.board){ state.board=env.board; state.rev=+(env._rev||0); state.online=true; }
+      if(env && env.board){ state.board=env.board; state.rev=+(env._rev||0); state.online=true; saveBoardCache(); }
       else { state.online=true; state.board=state.board||null; }
       render();
+      flushOutbox(); // signal confirmed — send anything waiting
     }).catch(function(){ state.online=false; setStatus(); });
   }
   function setStatus(){
     var dot=$("hDot"), st=$("hStat");
-    if(state.online){ dot.className="dot on"; st.textContent="live"; }
-    else { dot.className="dot warn"; st.textContent="offline — retrying"; }
+    var pend=loadOutbox().length;
+    if(state.online){ dot.className="dot on"; st.textContent="live"+(pend?" · "+pend+" to send":""); }
+    else { dot.className="dot warn"; st.textContent=pend?(pend+" to send — retrying"):"offline — retrying"; }
+  }
+
+  // ---------- outbox: everything the phone SENDS goes through here, queued + auto-retried ----------
+  // Each item stores a full board snapshot with the new record already appended. The server merges
+  // by record id, so posting a snapshot can only ADD our record — it never clobbers anything else,
+  // and a stale snapshot can't overwrite newer TOC edits (older section timestamps lose the merge).
+  function loadOutbox(){ try{ var a=JSON.parse(localStorage.getItem(LS_OUTBOX)||"[]"); return Array.isArray(a)?a:[]; }catch(e){ return []; } }
+  function saveOutbox(a){ try{ localStorage.setItem(LS_OUTBOX, JSON.stringify(a||[])); }catch(e){} }
+  function outboxIds(){ var s={}; loadOutbox().forEach(function(x){ if(x&&x.id!=null) s[x.id]=1; }); return s; }
+  function snapshotWith(listKey, rec){
+    var board=JSON.parse(JSON.stringify(state.board||{}));
+    if(!Array.isArray(board[listKey])) board[listKey]=[];
+    board[listKey].push(rec);
+    return board;
+  }
+  function queueSend(board, recId, label){
+    var a=loadOutbox();
+    a.push({ id:recId, board:board, label:label||"Report", tries:0 });
+    if(a.length>20) a=a.slice(a.length-20);
+    saveOutbox(a);
+    setStatus(); renderSent();
+    flushOutbox();
+  }
+  var flushing=false, flushTimer=null;
+  function flushOutbox(){
+    clearTimeout(flushTimer); flushTimer=null;
+    if(flushing || !state.url) return;
+    var a=loadOutbox(); if(!a.length){ setStatus(); return; }
+    flushing=true;
+    var item=a[0];
+    fetch(state.url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(item.board)})
+      .then(function(){
+        flushing=false; state.online=true;
+        var cur=loadOutbox().filter(function(x){ return x.id!==item.id; });
+        saveOutbox(cur);
+        toast(item.label+" sent to TOC ✓");
+        setStatus(); renderSent();
+        if(cur.length) flushOutbox(); // keep draining
+      })
+      .catch(function(){
+        flushing=false; state.online=false;
+        var cur=loadOutbox(); if(cur[0]&&cur[0].id===item.id) cur[0].tries=(cur[0].tries||0)+1;
+        saveOutbox(cur);
+        if(cur[0]&&cur[0].tries===1) toast(item.label+" saved — no signal, will retry",true); // only nag once
+        setStatus();
+        var t=cur[0]?cur[0].tries:1;
+        flushTimer=setTimeout(flushOutbox, Math.min(30000, 2000*Math.pow(2, Math.min(4,t)))); // backoff
+      });
   }
 
   // ---------- schedule now/next ----------
@@ -385,9 +496,7 @@
     if(!cat.wr && wr.running) wrStop();
 
     // action buttons
-    var form=b&&b.psgFormUrl?String(b.psgFormUrl).trim():"";
     var phone=b&&b.tocPhone?String(b.tocPhone).trim():"";
-    var rb=$("btnReport"); if(form){ rb.href=form; rb.classList.remove("disabled"); } else { rb.removeAttribute("href"); rb.classList.add("disabled"); }
     var cb=$("btnCall"); if(phone){ cb.href="tel:"+phone.replace(/[^0-9+]/g,""); cb.classList.remove("disabled"); } else { cb.removeAttribute("href"); cb.classList.add("disabled"); }
 
     // today list
@@ -482,13 +591,15 @@
     var mine=loadSent().filter(function(r){ return r && (!state.platoon || !r.platoon || r.platoon===state.platoon); });
     if(!mine.length){ card.classList.add("hide"); list.innerHTML=""; return; }
     card.classList.remove("hide");
-    // index the board's requests by id so we can show live Sent/Open/Filled
+    // index the board's requests by id so we can show live Pending/Sent/Open/Filled
     var byId={}, srv=(state.board&&Array.isArray(state.board.supplyRequests))?state.board.supplyRequests:[];
     srv.forEach(function(r){ if(r&&r.id!=null) byId[r.id]=r; });
+    var pend=outboxIds();
     list.innerHTML="";
     mine.slice().reverse().forEach(function(r){
       var on=byId[r.id], statusCls, statusTxt;
-      if(!on){ statusCls="sent"; statusTxt="SENT"; }
+      if(pend[r.id]){ statusCls="pending"; statusTxt="PENDING"; }
+      else if(!on){ statusCls="sent"; statusTxt="SENT"; }
       else if(String(on.status).toLowerCase()==="filled"){ statusCls="filled"; statusTxt="FILLED"; }
       else { statusCls="open"; statusTxt="OPEN"; }
       var t=r.time&&/^\d{4}$/.test(r.time)?(r.time.slice(0,2)+":"+r.time.slice(2,4)):(r.time||"");
@@ -518,10 +629,6 @@
     if(!item){ $("supItem").focus(); $("supItem").style.borderColor="var(--red)"; return; }
     if(!state.url){ toast("Not connected — can't send.",true); return; }
     if(!state.board){ toast("Still loading the board — try again in a moment.",true); return; }
-    // Post the board with our new request appended. The server merges by record id, so a phone
-    // can only ADD a request — it can't overwrite or wipe anything else on the board.
-    var board=JSON.parse(JSON.stringify(state.board));
-    if(!Array.isArray(board.supplyRequests)) board.supplyRequests=[];
     var now=Date.now(), c=campNow();
     var rec={
       id:"sr"+now.toString(36)+Math.random().toString(36).slice(2,6),
@@ -529,14 +636,10 @@
       priority:$("supPri").value||"Routine", notes:$("supNotes").value.trim(),
       time:pad(c.h)+pad(c.m), status:"Open", _m:now
     };
-    board.supplyRequests.push(rec);
-    try{
-      fetch(state.url,{method:"POST",mode:"no-cors",headers:{"Content-Type":"text/plain;charset=utf-8"},body:JSON.stringify(board)})
-        .then(function(){ toast("Supply request sent to TOC ✓"); })
-        .catch(function(){ toast("Send failed — check signal and retry.",true); });
-    }catch(e){ toast("Send failed — check signal and retry.",true); }
-    state.board=board; // optimistic local copy
-    addSent(rec);      // record it in this phone's history so the PSG has confirmation
+    var board=snapshotWith("supplyRequests", rec);
+    state.board=board;   // optimistic local copy so it shows right away
+    addSent(rec);        // record it in this phone's history so the PSG has confirmation
+    queueSend(board, rec.id, "Supply request"); // queued + auto-retried if signal is poor
     closeSupply();
     $("supItem").value=""; $("supQty").value=""; $("supNotes").value=""; $("supPri").value="Routine";
     $("supItem").style.borderColor="";
@@ -544,6 +647,60 @@
   $("btnSupply").addEventListener("click",openSupply);
   $("supCancel").addEventListener("click",closeSupply);
   $("supSend").addEventListener("click",sendSupply);
+
+  // ---------- report to TOC (incident / heat casualty) — native, no Google Form needed ----------
+  // Posts into the board's existing `incidents` / `heatCas` lists (append-only by id, same safe
+  // pattern as supply requests), so it needs no sync-backend change.
+  var repMode="inc";
+  function dtgZ(){ var d=new Date(); return pad(d.getUTCDate())+pad(d.getUTCHours())+pad(d.getUTCMinutes())+"Z"; }
+  function setReportMode(m){
+    repMode=(m==="heat")?"heat":"inc";
+    $("repTabInc").classList.toggle("on",repMode==="inc");
+    $("repTabHeat").classList.toggle("on",repMode==="heat");
+    $("repInc").classList.toggle("hide",repMode!=="inc");
+    $("repHeat").classList.toggle("hide",repMode!=="heat");
+  }
+  function openReport(){
+    if(!state.url){ toast("Set up sync first — tap Settings.",true); return; }
+    $("repPlt").textContent=state.platoon||"your platoon";
+    setReportMode("inc");
+    $("repIncType").value=""; $("repIncRemarks").value=""; $("repIncType").style.borderColor="";
+    $("repHeatName").value=""; $("repHeatAction").value=""; $("repHeatType").value="Heat exhaustion";
+    $("repHsWarn").classList.add("hide");
+    $("report").classList.remove("hide"); setTimeout(function(){ $("repIncType").focus(); },50);
+  }
+  function closeReport(){ $("report").classList.add("hide"); }
+  function sendReport(){
+    if(!state.url){ toast("Not connected — can't send.",true); return; }
+    if(!state.board){ toast("Still loading the board — try again in a moment.",true); return; }
+    var now=Date.now(), c=campNow(), plt=state.platoon||"";
+    if(repMode==="inc"){
+      var what=$("repIncType").value.trim();
+      if(!what){ $("repIncType").focus(); $("repIncType").style.borderColor="var(--red)"; return; }
+      var rem=$("repIncRemarks").value.trim();
+      var rec={ id:"in"+now.toString(36)+Math.random().toString(36).slice(2,6),
+        time:dtgZ(), type:what, remarks:(plt?plt+": ":"")+rem, status:"Open", _m:now };
+      queueSend(snapshotWith("incidents", rec), rec.id, "Incident report");
+    }else{
+      var nm=$("repHeatName").value.trim();
+      var rec2={ id:"hc"+now.toString(36)+Math.random().toString(36).slice(2,6),
+        time:pad(c.h)+":"+pad(c.m), name:(nm+(plt?" ("+plt+")":"")).trim(),
+        type:$("repHeatType").value||"Heat exhaustion", action:$("repHeatAction").value.trim(), _m:now };
+      queueSend(snapshotWith("heatCas", rec2), rec2.id, "Heat casualty report");
+    }
+    closeReport();
+  }
+  // incident quick-pick chips
+  (function(){ var box=$("repIncChips"); if(!box) return;
+    INC_QUICK.forEach(function(t){ var b=document.createElement("button"); b.type="button"; b.className="chip"; b.textContent=t;
+      b.addEventListener("click",function(){ $("repIncType").value=t; $("repIncType").style.borderColor=""; }); box.appendChild(b); });
+  })();
+  $("btnReport").addEventListener("click",openReport);
+  $("repCancel").addEventListener("click",closeReport);
+  $("repSend").addEventListener("click",sendReport);
+  $("repTabInc").addEventListener("click",function(){ setReportMode("inc"); });
+  $("repTabHeat").addEventListener("click",function(){ setReportMode("heat"); });
+  $("repHeatType").addEventListener("change",function(){ $("repHsWarn").classList.toggle("hide", this.value!=="Heat stroke"); });
 
   // clock tick
   setInterval(function(){ var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); if(wr.running) renderWR(); },1000);

@@ -97,20 +97,29 @@ from a phone, not just a laptop or wall display.
   for Platoon Sergeants out with the campers. It connects to the same live board
   (via the sync link) and shows just what they need: their platoon's **Now / Next**
   activity and location, the **heat flag + water/work-rest guidance** (with an
-  optional work/rest timer), a one-tap **Report to TOC** (your incident form),
-  **Call TOC**, and **Supply Request** (a quick form — item, quantity, priority —
-  that lands in the TOC's Supply Requests panel), plus any **announcement** the TOC
-  broadcasts. After sending a request the PSG sees it in a **My supply requests**
-  list on their phone — their own confirmation of what they sent — and each one
-  shows a live status (**Sent → Open → Filled**) as the TOC works it, so they know
-  when it's been handled without calling in. The phones are read-only apart from
-  sending supply requests — a phone can only *add* a request, never change anything
-  else on the board. Set the
-  announcement, incident form
-  link, and TOC phone number in the **Field / PSG Broadcast** panel on the main
-  board, which also shows a **QR code and "Copy PSG link"** — a PSG scans the code
-  or taps the link and the page opens with the sync link already filled in; they
-  just pick their platoon. (This broadcast channel is synced, so it needs the
+  optional work/rest timer), **Call TOC**, and three quick things the phone can
+  send straight to the TOC board:
+  - **Supply Request** (item, quantity, priority) → lands in the TOC's Supply
+    Requests panel.
+  - **Report to TOC** → a native quick-report (no Google Form) that posts an
+    **incident** (with quick-pick types) or a **heat casualty** (name, type,
+    action, with a heat-stroke 911 reminder) directly into the TOC's Incident Log
+    / Heat Casualties panels, tagged with the platoon. The medic's incident form
+    isn't needed for the PSG/APSG.
+
+  After sending a supply request the PSG sees it in a **My supply requests** list
+  on their phone — their own confirmation of what they sent — with a live status
+  (**Pending → Sent → Open → Filled**) as the TOC works it. Everything the phone
+  sends is **queued and auto-retried**, so a request or report made with poor
+  signal isn't lost — it shows as *Pending* and goes out as soon as signal
+  returns (the header shows how many are waiting). The page also **caches the last
+  board**, so the schedule, heat flag, and the send buttons still work with no
+  signal. The phones are read-only apart from these sends — a phone can only *add*
+  a request or report, never change anything else on the board. Set the
+  announcement and TOC phone number in the **Field / PSG Broadcast** panel on the
+  main board, which also shows a **QR code and "Copy PSG link"** — a PSG scans the
+  code or taps the link and the page opens with the sync link already filled in;
+  they just pick their platoon. (This broadcast channel is synced, so it needs the
   updated `sync/Code.gs` deployed — see [SYNC-SETUP.md](SYNC-SETUP.md).)
 
 ## Saving & moving the board between computers
