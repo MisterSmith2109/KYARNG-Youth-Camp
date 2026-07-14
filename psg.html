@@ -246,9 +246,10 @@
   function connect(){
     state.url=""; try{ state.url=localStorage.getItem(LS_URL)||""; }catch(e){}
     try{ state.platoon=localStorage.getItem(LS_PLT)||""; }catch(e){}
-    if(!state.url||!state.platoon){ openSetup(true); return; }
-    render(); pull();
-    clearInterval(pollTimer); pollTimer=setInterval(pull,12000);
+    // As long as we have a sync link, start pulling the board — even before a platoon is picked —
+    // so the setup dropdown can show the real platoon list (including HQ / custom platoons).
+    if(state.url){ render(); pull(); clearInterval(pollTimer); pollTimer=setInterval(pull,12000); }
+    if(!state.url||!state.platoon){ openSetup(true); }
   }
   function pull(){
     if(!state.url){ return; }
@@ -351,6 +352,8 @@
     var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m);
     $("updated").textContent="updated "+pad(c.h)+":"+pad(c.m)+" CT";
     renderWR();
+    // if the setup sheet is open, refresh the platoon list now that we have the board
+    if(!$("setup").classList.contains("hide")) fillSetupPlatoons();
   }
   function fmtRange(r){ if(!r||!r.rng) return ""; return to12(r.rng.start)+(r.rng.end!=null&&r.end!==r.rng.start?" – "+to12(r.end):""); }
   function esc(s){ return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
@@ -379,10 +382,18 @@
   }
 
   // ---------- setup / settings ----------
+  // Build the platoon dropdown from the live board's platoon list (so custom ones like HQ show);
+  // falls back to the standard names only until the board has been fetched. Preserves the pick.
+  function fillSetupPlatoons(){
+    var sel=$("setPlt"); if(!sel) return;
+    var chosen=sel.value||state.platoon||"";
+    var names=(state.board&&state.board.platoons&&state.board.platoons.length)
+      ? state.board.platoons.map(function(p){return p&&p.name;}).filter(Boolean) : PLATOONS.slice();
+    sel.innerHTML="";
+    names.forEach(function(n){ var o=document.createElement("option"); o.textContent=n; o.value=n; if(n===chosen) o.selected=true; sel.appendChild(o); });
+  }
   function openSetup(first){
-    var sel=$("setPlt"); sel.innerHTML="";
-    var names=(state.board&&state.board.platoons&&state.board.platoons.length)? state.board.platoons.map(function(p){return p.name;}) : PLATOONS;
-    names.forEach(function(n){ var o=document.createElement("option"); o.textContent=n; o.value=n; if(n===state.platoon) o.selected=true; sel.appendChild(o); });
+    fillSetupPlatoons();
     $("setUrl").value=state.url||"";
     $("setupTitle").textContent=first?"PSG Field View — setup":"Settings";
     $("setCancel").style.display=first?"none":"";
