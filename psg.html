@@ -95,7 +95,19 @@
   .abtn.call{background:#10231a;border-color:var(--green);color:#cdeccd}
   .abtn.notes{background:#231e10;border-color:var(--amber);color:#f0d9a6}
   .abtn.supply{grid-column:1/-1;background:#16202b;border-color:#5a7d8c;color:#cfe3ef}
-  .abtn.docs{grid-column:1/-1;background:#1a2118;border-color:var(--olive);color:var(--olive-bright)}
+  .abtn.roster{background:#1f1a2b;border-color:#8a76a8;color:#dccff0}
+  .abtn.docs{background:#1a2118;border-color:var(--olive);color:var(--olive-bright)}
+  /* platoon roster list */
+  .ros-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line-soft)}
+  .ros-row:first-child{border-top:none}
+  .ros-main{flex:1;min-width:0}
+  .ros-name{font-size:16px;font-weight:600}
+  .ros-role{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-top:1px}
+  .ros-st{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 9px;border-radius:20px;flex:none}
+  .ros-st.in{background:var(--green);color:#0f1a0e}
+  .ros-st.out{background:var(--panel-2);color:var(--muted);border:1px solid var(--line)}
+  .ros-st.absent{background:var(--amber);color:#241a05}
+  #rosList{max-height:52vh;overflow-y:auto}
   /* documents list */
   .doc-row{display:flex;align-items:center;gap:11px;padding:13px 12px;border:1px solid var(--line);border-radius:11px;margin-bottom:9px;text-decoration:none;color:var(--ink);background:var(--panel-2)}
   .doc-row:active{background:var(--line-soft)}
@@ -245,6 +257,7 @@
     <button class="abtn report" id="btnReport"><span class="ico">📝</span>Report to TOC</button>
     <button class="abtn notes" id="btnNotes"><span class="ico">🗒️</span>Notes</button>
     <button class="abtn supply" id="btnSupply"><span class="ico">📦</span>Supply Request</button>
+    <button class="abtn roster" id="btnRoster"><span class="ico">👥</span>Platoon Roster</button>
     <button class="abtn docs" id="btnDocs"><span class="ico">📁</span>Documents</button>
   </div>
 
@@ -374,6 +387,16 @@
     <p>Reference files — tap to open. Needs a connection to download the first time.</p>
     <div id="docList"></div>
     <div style="text-align:center;margin-top:12px"><button class="linkbtn" id="docClose">Done</button></div>
+  </div>
+</div>
+
+<!-- platoon roster sheet (read from the TOC sign-in roster) -->
+<div class="overlay hide" id="roster">
+  <div class="sheet">
+    <h1>Platoon Roster</h1>
+    <p id="rosSub">—</p>
+    <div id="rosList"></div>
+    <div style="text-align:center;margin-top:12px"><button class="linkbtn" id="rosClose">Done</button></div>
   </div>
 </div>
 
@@ -621,6 +644,7 @@
     renderWR();
     renderSent(); // refresh my-requests live status against the freshly pulled board
     checkEventAlert(); // show/refresh the 10-min heads-up for the next activity
+    if(!$("roster").classList.contains("hide")) renderPltRoster(); // keep an open roster live
     // if the setup sheet is open, refresh the platoon list now that we have the board
     if(!$("setup").classList.contains("hide")) fillSetupPlatoons();
   }
@@ -946,6 +970,42 @@
   function closeDocs(){ $("documents").classList.add("hide"); }
   $("btnDocs").addEventListener("click",openDocs);
   $("docClose").addEventListener("click",closeDocs);
+
+  // ---------- platoon roster (built from the TOC sign-in roster) ----------
+  // Each person's platoon = their roster "group" IF they're a Camper/PSG/APSG; anyone in any other
+  // role (Staff, Support, etc.) belongs to the Lifeline (HQ) platoon.
+  var ROLE_ORDER={psg:0,apsg:1,camper:2,staff:3,support:4};
+  function isLeadRole(role){ role=String(role||"").trim().toLowerCase(); return role==="camper"||role==="psg"||role==="apsg"; }
+  function roleRank(role){ var k=String(role||"").trim().toLowerCase(); return (k in ROLE_ORDER)?ROLE_ORDER[k]:5; }
+  function rosterStatus(s){ s=String(s||"").trim().toLowerCase(); if(s==="in") return ["in","IN"]; if(s==="absent") return ["absent","ABS"]; return ["out","OUT"]; }
+  function belongsHere(r, myPlt, iAmHQ){
+    var assigned = isLeadRole(r.role) ? String(r.group||"").trim() : "__HQ__"; // non lead roles -> HQ/Lifeline
+    if(iAmHQ){ return assigned==="__HQ__" || HQ_NAMES.indexOf(assigned.toLowerCase())>=0; }
+    return assigned.toLowerCase()===String(myPlt||"").trim().toLowerCase();
+  }
+  function renderPltRoster(){
+    var list=$("rosList"), sub=$("rosSub"); if(!list) return;
+    var b=state.board, plt=state.platoon, iAmHQ=isHQView();
+    var people=(b&&Array.isArray(b.roster)) ? b.roster.filter(function(r){ return r&&r.name&&belongsHere(r,plt,iAmHQ); }) : [];
+    people.sort(function(a,c){ var ra=roleRank(a.role), rc=roleRank(c.role); if(ra!==rc) return ra-rc; return String(a.name||"").localeCompare(String(c.name||"")); });
+    var total=people.length,
+        inN=people.filter(function(r){ return String(r.status).toLowerCase()==="in"; }).length,
+        absN=people.filter(function(r){ return String(r.status).toLowerCase()==="absent"; }).length;
+    sub.textContent=(plt||"Platoon")+" — "+(total? (inN+" of "+total+" signed in"+(absN?" · "+absN+" absent":"")) : "no one assigned yet");
+    list.innerHTML="";
+    if(!total){ list.innerHTML='<div class="doc-empty muted">'+((b&&b.roster)?"No one is assigned to this platoon on the roster yet.":"Connect to load the roster.")+'</div>'; return; }
+    people.forEach(function(r){
+      var st=rosterStatus(r.status), row=document.createElement("div"); row.className="ros-row";
+      row.innerHTML='<div class="ros-main"><div class="ros-name">'+esc(r.name)+'</div>'+
+        (r.role?'<div class="ros-role">'+esc(r.role)+'</div>':'')+'</div>'+
+        '<span class="ros-st '+st[0]+'">'+st[1]+'</span>';
+      list.appendChild(row);
+    });
+  }
+  function openRoster(){ renderPltRoster(); $("roster").classList.remove("hide"); }
+  function closeRoster(){ $("roster").classList.add("hide"); }
+  $("btnRoster").addEventListener("click",openRoster);
+  $("rosClose").addEventListener("click",closeRoster);
 
   $("btnAlerts").addEventListener("click",requestAlerts);
   $("evtAlertX").addEventListener("click",function(){ dismissedKey=shownKey; $("evtAlert").classList.add("hide"); });

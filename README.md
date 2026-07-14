@@ -101,7 +101,11 @@ from a phone, not just a laptop or wall display.
   AAR comments and reminders — timestamped, saved offline, with *copy all* to
   paste into an AAR later), a **Documents** button (tap to open reference files —
   camp map, cadences, emergency/contingency plan — served from the project's
-  `docs/` folder and listed from `docs/manifest.json`), and three quick things
+  `docs/` folder and listed from `docs/manifest.json`), a **Platoon Roster**
+  button (their platoon's people and live sign-in status, built from the TOC
+  sign-in roster — a person's platoon comes from their roster *group* if they're
+  a Camper/PSG/APSG, and anyone in another role such as Staff/Support counts as
+  **Lifeline**), and three quick things
   the phone can send straight to the TOC board. The **Lifeline (HQ)** phone additionally gets a
   **platoon picker** — tap any platoon to browse its Now / Next and rest-of-day
   schedule (their own pre-event alerts still follow Lifeline); regular platoons
