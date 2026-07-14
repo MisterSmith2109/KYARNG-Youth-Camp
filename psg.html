@@ -402,6 +402,16 @@
   // clock tick
   setInterval(function(){ var c=campNow(); $("hTime").textContent=pad(c.h)+":"+pad(c.m); if(wr.running) renderWR(); },1000);
 
+  // Pre-fill from a shared link: psg.html?sync=<exec url>&platoon=<name>. Saves it, then
+  // cleans the address bar so the sync link isn't left sitting in the URL.
+  try{
+    var qs=new URLSearchParams(location.search);
+    var qSync=qs.get("sync"), qPlt=qs.get("platoon");
+    if(qSync) localStorage.setItem(LS_URL, qSync);
+    if(qPlt) localStorage.setItem(LS_PLT, qPlt);
+    if(qSync||qPlt) history.replaceState(null,"",location.pathname);
+  }catch(e){}
+
   wrRestore();
   connect();
 })();

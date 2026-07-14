@@ -90,8 +90,10 @@ it works, online or offline.
   **Call TOC** button, and any **announcement** the TOC broadcasts. The phones only
   *read* the board — they can't change it. Set the announcement, incident form
   link, and TOC phone number in the **Field / PSG Broadcast** panel on the main
-  board. (This broadcast channel is synced, so it needs the updated `sync/Code.gs`
-  deployed — see [SYNC-SETUP.md](SYNC-SETUP.md).)
+  board, which also shows a **QR code and "Copy PSG link"** — a PSG scans the code
+  or taps the link and the page opens with the sync link already filled in; they
+  just pick their platoon. (This broadcast channel is synced, so it needs the
+  updated `sync/Code.gs` deployed — see [SYNC-SETUP.md](SYNC-SETUP.md).)
 
 ## Saving & moving the board between computers
 
