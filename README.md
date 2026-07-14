@@ -7,7 +7,10 @@ volunteer, military or not, can pick it up quickly.
 
 Everything lives in one file, **`index.html`**. There is nothing to install and
 no server to run — double-click the file (or open it in any modern browser) and
-it works, online or offline.
+it works, online or offline. It's **phone-friendly** too: on a small screen the
+panels stack, the glance tiles go two-across, dense tables scroll sideways within
+their panel, and the controls are touch-sized — so the full TOC board is usable
+from a phone, not just a laptop or wall display.
 
 ## What's on the board
 

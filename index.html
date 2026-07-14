@@ -184,6 +184,51 @@
     .dtg{text-align:left}
     .board-head{align-items:flex-start}
   }
+  /* Phones */
+  @media (max-width:560px){
+    body{padding:10px}
+    /* stack the brand over the clock so the camp name isn't truncated */
+    .board-head{flex-direction:column;align-items:stretch;gap:6px;padding-bottom:10px;margin-bottom:12px}
+    .brand{min-width:0}
+    .camp-name{font-size:22px}
+    .dtg{min-width:0;text-align:left}
+    .dtg .z{font-size:22px}
+    .meta-row{gap:8px;margin-bottom:14px}
+    .meta{flex:1 1 100%;min-width:0}  /* one field per row so long OIC/NCO values are readable */
+    /* glance tiles: 2 across, smaller numbers */
+    .tiles{gap:8px;margin-bottom:14px}
+    .tile{padding:12px 12px 11px}
+    .tile .t-val{font-size:40px}
+    .tile .hf-wbgt,.hf-wbgt{font-size:26px}
+    /* panels tighter; let heads wrap instead of overflowing */
+    .panel-body{padding:10px 11px}
+    .panel-head{padding:9px 11px;flex-wrap:wrap}
+    .panel-head h2{font-size:12px;letter-spacing:.12em}
+    /* touch targets + font-size 16px avoids iOS zoom-on-focus */
+    input,select,textarea{padding:10px;font-size:16px}
+    .meta input{padding:3px 0;font-size:16px}
+    .btn,.btn2,.add-btn,.dtab,.ptab,.sign-btn{min-height:42px}
+    .collapse-btn{width:34px;height:34px}
+    .toolbar{gap:8px}
+    .toolbar .btn{flex:1 1 44%;justify-content:center;min-height:44px}
+    .save-note{flex-basis:100%;text-align:center;margin:0 0 4px}
+    /* weather current temp */
+    .wx-temp{font-size:42px}
+    .heat-flag{flex:1 1 100%;min-width:0}
+    /* incident rows → stacked cards with the delete pinned to the side */
+    .inc-row{grid-template-columns:1fr 34px;grid-template-areas:"t d" "ty d" "rm d";gap:6px;
+      border:1px solid var(--line-soft);border-radius:6px;padding:9px;margin-bottom:10px;align-items:start}
+    .inc-row>*:nth-child(1){grid-area:t}
+    .inc-row>*:nth-child(2){grid-area:ty}
+    .inc-row>*:nth-child(3){grid-area:rm}
+    .inc-row>*:nth-child(4){grid-area:d;align-self:start}
+    /* give dense tables room + horizontal scroll instead of crushing columns */
+    .tbl-scroll table{min-width:480px}
+    .tbl-scroll{-webkit-overflow-scrolling:touch}
+    /* PSG QR block stacks */
+    .psg-share{gap:10px}
+    .psg-qr{width:120px;height:120px}
+  }
   @media print{
     body{background:#fff;color:#000;padding:0}
     .toolbar,.icon-btn,.add-btn{display:none}
