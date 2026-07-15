@@ -115,9 +115,9 @@ from a phone, not just a laptop or wall display.
   — keep only non-sensitive material here, since the folder is publicly served),
   a **Platoon Roster**
   button (their platoon's people and live sign-in status, built from the TOC
-  sign-in roster — a person's platoon comes from their roster *group* if they're
-  a Camper/PSG/APSG, and anyone in another role such as Staff/Support counts as
-  **Lifeline**), and three quick things
+  sign-in roster — a person's platoon comes from their roster *Group*, and anyone
+  whose role is explicitly **Staff/Support** (or whose group matches no platoon)
+  rolls up to **Lifeline**), and three quick things
   the phone can send straight to the TOC board. The **Lifeline (HQ)** phone additionally gets a
   **platoon picker** — tap any platoon to browse its Now / Next and rest-of-day
   schedule (their own pre-event alerts still follow Lifeline); regular platoons
