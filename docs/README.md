@@ -2,6 +2,12 @@
 
 Reference files shown by the **Documents** button on the PSG page (`psg.html`).
 
+> ⚠️ **Public folder.** This project is served by GitHub Pages from a public repo,
+> so everything in `docs/` is downloadable by anyone at a guessable URL — it is
+> **not** protected by the sync link. Put **only non-sensitive** material here
+> (e.g. cadences). Do **not** store operational or sensitive documents such as
+> emergency/contingency plans, site maps, rosters, or anything CUI/FOUO.
+
 ## How it works
 The Documents button reads **`manifest.json`** in this folder and lists each entry.
 Tapping a document opens the file (PDFs and images open right in the phone browser).
