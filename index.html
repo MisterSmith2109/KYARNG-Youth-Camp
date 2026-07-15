@@ -3542,15 +3542,18 @@ var qrcode = function() {
     const tC=wxObs.tempC, rh=wxObs.rh;
     if(tC==null||rh==null){ wxEst.mode=null; return null; }
     const Tw=wetBulbC(tC,rh);
-    const S=wxObs.solar, u=(wxObs.windMS!=null?Math.max(wxObs.windMS,0.2):null);
+    // Floor wind at 1 m/s: the simple globe model is unstable as wind -> 0, and weather feeds
+    // frequently report near-calm inland even with a real breeze. Without this floor a near-calm
+    // reading inflates the black globe by ~+28°C and pushes WBGT to ~air temp — a false CAT 5.
+    const S=wxObs.solar, u=(wxObs.windMS!=null?Math.max(wxObs.windMS,1.0):null);
     // Black-globe temperature. With sun it rises above air temp from the solar load,
     // tempered by wind (convective cooling); with no sun it collapses back to air temp,
     // so the same formula gives an indoor/shade WBGT (0.7·wet-bulb + 0.3·dry-bulb).
     let Tg=tC, mode;
     if(S!=null && S>10 && u!=null){
-      // Tuned so full noon sun (~900 W/m²) gives ~+17°C in light wind, ~+9°C when breezy.
+      // Tuned so full noon sun (~900 W/m²) gives ~+17°C at the 1 m/s floor, ~+9°C when breezy.
       const dTg=S/(15+38*Math.sqrt(u));
-      Tg=tC+Math.min(dTg,30);
+      Tg=tC+Math.min(dTg,20); // cap the globe rise at a physically realistic ceiling
       mode="sun";
     }else{
       mode=(S!=null)?"shade":"noSolar";
