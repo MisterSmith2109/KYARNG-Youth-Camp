@@ -441,7 +441,9 @@
   .fm-bsub{font-size:13px;font-weight:600;opacity:.92}
   .fm-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
   @media (max-width:640px){.fm-grid{grid-template-columns:1fr}}
-  .fm-h{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:8px;display:flex;justify-content:space-between;gap:8px}
+  .fm-h{font-family:var(--mono);font-size:12px;letter-spacing:.09em;text-transform:uppercase;color:var(--ink);font-weight:800;margin-bottom:10px;display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line);padding-bottom:6px}
+  .fm-h > span:last-child{font-family:var(--mono);font-weight:800;font-size:12px;letter-spacing:.02em;color:var(--ink);background:var(--panel-2);border:1px solid var(--line);border-radius:20px;padding:1px 9px;min-width:22px;text-align:center}
+  .fm-h.fm-h-ok > span:last-child{color:#0f1a0e;background:var(--green);border-color:var(--green)}
   .fm-list{display:flex;flex-direction:column;gap:4px}
   .fm-list.fm-dim{opacity:.75}
   .fm-list.fm-offlist .fm-name{border-left:3px solid var(--steel)}
@@ -4084,7 +4086,7 @@ var qrcode = function() {
   function renderPlatoonAccount(){
     const box=$("fmPlt"); if(!box) return;
     const rows=platoonAccountRows();
-    if($("fmPltN")) $("fmPltN").textContent = rows.length ? String(rows.length)+(rows.length===1?" platoon":" platoons") : "";
+    if($("fmPltN")) $("fmPltN").textContent = String(rows.length);
     if(!rows.length){ box.innerHTML='<div class="fm-empty">No one on the roster yet — set each person&rsquo;s Group to their platoon.</div>'; return; }
     box.innerHTML=rows.map(x=>{
       const cls = x.outN>0 ? "pa-warn" : (x.tot? "" : "pa-empty");
@@ -4123,14 +4125,15 @@ var qrcode = function() {
       sub.textContent=rc.in+" / "+rc.accountable+" in"+(rc.absent?" · "+rc.absent+" excused":"");
       if(chip) chip.textContent=out.length+" out";
     }
-    if($("fmOutN")) $("fmOutN").textContent=out.length?String(out.length):"";
-    if($("fmOffN")) $("fmOffN").textContent=offsite.length?String(offsite.length):"";
-    if($("fmDepN")) $("fmDepN").textContent=departed.length?String(departed.length):"";
-    if($("fmAbsN")) $("fmAbsN").textContent=abs.length?String(abs.length):"";
+    // Always show a number (0 included) — no checkmark; a 0 "not signed in" goes green when everyone's in.
+    if($("fmOutN")){ $("fmOutN").textContent=String(out.length); const h=$("fmOutN").parentElement; if(h) h.classList.toggle("fm-h-ok", out.length===0 && list.length>0); }
+    if($("fmOffN")) $("fmOffN").textContent=String(offsite.length);
+    if($("fmDepN")) $("fmDepN").textContent=String(departed.length);
+    if($("fmAbsN")) $("fmAbsN").textContent=String(abs.length);
     // Not-signed-in list, grouped by PERSTAT group in a fixed order.
     const outEl=$("fmOut");
     if(outEl){
-      if(out.length===0){ outEl.innerHTML='<div class="fm-empty">Everyone is signed in. ✓</div>'; }
+      if(out.length===0){ outEl.innerHTML='<div class="fm-empty">Everyone signed in.</div>'; }
       else{
         const order=PERSTAT_GROUPS.map(g=>g.label).concat("Other");
         let html="";
