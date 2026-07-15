@@ -511,6 +511,30 @@
     <div class="meta"><label>Weather / FPCON</label><input id="mWx" placeholder="e.g. Clear, WBGT Green"></div>
   </div>
  
+  <!-- GLANCE TILES -->
+  <div class="tiles">
+    <div class="tile" id="tileVol">
+      <span class="t-label">On Ground</span>
+      <div class="t-val" id="valOG">0</div>
+      <div class="t-sub" id="ogSub">present</div>
+    </div>
+    <div class="tile" id="tileInc">
+      <span class="t-label">Incident Reports</span>
+      <div class="t-val" id="valInc">0</div>
+      <div class="t-sub" id="incSub">0 open</div>
+    </div>
+    <div class="tile" id="tileGsa">
+      <input class="t-label" id="lblGsa" value="GSAs" aria-label="Tile 3 label">
+      <div class="t-val" id="valGsa">0</div>
+      <div class="t-sub" id="gsaSub">0 signed out</div>
+    </div>
+    <div class="tile good" id="tileAcc">
+      <span class="t-label">Accountability</span>
+      <div class="t-val" id="valAcc">--%</div>
+      <div class="t-sub" id="accSub">0 / 0 present</div>
+    </div>
+  </div>
+
   <!-- WEATHER (National Weather Service) -->
   <div class="wx-panel">
     <div class="wx-head">
@@ -539,94 +563,6 @@
     </div>
   </div>
  
-  <!-- GLANCE TILES -->
-  <div class="tiles">
-    <div class="tile" id="tileVol">
-      <span class="t-label">On Ground</span>
-      <div class="t-val" id="valOG">0</div>
-      <div class="t-sub" id="ogSub">present</div>
-    </div>
-    <div class="tile" id="tileInc">
-      <span class="t-label">Incident Reports</span>
-      <div class="t-val" id="valInc">0</div>
-      <div class="t-sub" id="incSub">0 open</div>
-    </div>
-    <div class="tile" id="tileGsa">
-      <input class="t-label" id="lblGsa" value="GSAs" aria-label="Tile 3 label">
-      <div class="t-val" id="valGsa">0</div>
-      <div class="t-sub" id="gsaSub">0 signed out</div>
-    </div>
-    <div class="tile good" id="tileAcc">
-      <span class="t-label">Accountability</span>
-      <div class="t-val" id="valAcc">--%</div>
-      <div class="t-sub" id="accSub">0 / 0 present</div>
-    </div>
-  </div>
-
-  <!-- SENSITIVE ITEMS -->
-  <div class="panel" id="siPanel">
-    <div class="panel-head">
-      <h2>Sensitive Items</h2>
-      <div class="head-right">
-        <span class="si-chip" id="siChip"></span>
-      </div>
-    </div>
-    <div class="panel-body">
-      <div class="panel-sub">Signed-out sensitive items and their accountability. On a check, set <b>On Hand</b> to the number physically verified, or press <b>All present</b> to mark every item accounted and stamp the time.</div>
-      <div class="si-tools">
-        <button class="btn2" id="siAllPresent">All present</button>
-        <span class="si-lastcheck" id="siLastCheck"></span>
-      </div>
-      <div class="tbl-scroll">
-        <table>
-          <thead><tr><th>Item</th><th>Signed Out</th><th>On Hand</th><th>Status</th><th></th></tr></thead>
-          <tbody id="siBody"></tbody>
-        </table>
-      </div>
-      <button class="add-btn" id="siAdd">+ Add item</button>
-    </div>
-  </div>
-
-  <!-- GSAs -->
-  <div class="panel" id="gsaPanel">
-    <div class="panel-head">
-      <h2>GSAs</h2>
-      <div class="head-right"><span class="si-chip" id="gsaChip"></span></div>
-    </div>
-    <div class="panel-body">
-      <div class="panel-sub">Government vehicles / equipment. Enter each GSA and <b>who has it</b>. If it&rsquo;s not signed out to anyone, note <b>where it is</b> instead.</div>
-      <div class="tbl-scroll">
-        <table>
-          <thead><tr><th>GSA</th><th>Assigned To</th><th>Location</th><th></th></tr></thead>
-          <tbody id="gsaBody"></tbody>
-        </table>
-      </div>
-      <button class="add-btn" id="gsaAdd">+ Add GSA</button>
-    </div>
-  </div>
-
-  <div class="grid-2">
-  <!-- PERSTAT -->
-  <div class="panel">
-    <div class="panel-head"><h2>PERSTAT</h2><span class="hint">assigned &rarr; present</span></div>
-    <div class="panel-body">
-      <div class="panel-sub">Auto-summarized from the <b>Roster</b>. <b>Assigned</b> = accountable people in that group (<b>Departed</b> and <b>Absent</b> drop out); <b>Present</b> = signed <b>In</b> (on ground); <b>Off-site</b> = accounted for but off the property; <b>Gap</b> = still unaccounted (out).</div>
-      <table>
-        <thead><tr><th>Group</th><th>Assigned</th><th>Present</th><th>Off-site</th><th>Gap</th></tr></thead>
-        <tbody id="perBody"></tbody>
-        <tbody>
-          <tr class="total">
-            <td class="row-label">Total</td>
-            <td class="calc" id="perAsg">0</td>
-            <td class="calc" id="perPres">0</td>
-            <td class="calc" id="perOff">0</td>
-            <td class="calc" id="perGap">0</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </div>
-
   <!-- HEAT CONDITION -->
   <div class="panel">
     <div class="panel-head"><h2>Heat Condition &bull; WBGT</h2><span class="hint">category 1&ndash;5 &middot; guidance</span></div>
@@ -669,35 +605,19 @@
       </div>
     </div>
   </div>
-  </div>
 
-  <!-- DAILY SCHEDULE -->
-  <div class="panel">
-    <div class="panel-head">
-      <h2>Daily Schedule</h2>
-      <span class="hint" id="schToday"></span>
-    </div>
+  <!-- HEAT CASUALTIES -->
+  <div class="panel" id="hcPanel">
+    <div class="panel-head"><h2>Heat Casualties</h2><div class="head-right"><span class="si-chip" id="hcChip"></span></div></div>
     <div class="panel-body">
-      <div class="panel-sub">Pick a <b>day</b>, then a <b>platoon</b> to view/edit its schedule &mdash; or <b>All</b> for a read-only overview of every platoon side by side. Status advances automatically with the clock (the current row is highlighted). Rename platoons as needed.</div>
-      <div class="picker-label">Day</div>
-      <div class="dtab-row" id="dtabRow"></div>
-      <div class="picker-label">Platoon</div>
-      <div class="ptab-row" id="ptabRow"></div>
-      <div class="ptab-tools" id="ptTools">
-        <span class="fld-k">Platoon name</span>
-        <input id="ptName" class="pt-name-input" placeholder="Platoon name" aria-label="Platoon name">
-        <button class="btn2" id="ptAdd">+ Platoon</button>
-        <button class="btn2" id="ptDel">Remove platoon</button>
-        <button class="btn2" id="ptShared" title="Fill this platoon's whole week with the events the other platoons all do at the same time — flag formations, meals, wake-up, lights out, etc. Good for an HQ/staff platoon.">Fill from shared events</button>
-      </div>
-      <div class="tbl-scroll" id="schTableWrap">
+      <div class="hc-emg"><b>Heat stroke is a medical emergency.</b> Hot skin + confusion, staggering, or collapse &rarr; call <b>911</b>, cool the camper immediately (shade, water, ice to neck/armpits/groin), and notify camp medical. Log every heat case here as it happens.</div>
+      <div class="tbl-scroll">
         <table>
-          <thead><tr><th>Time</th><th>Activity</th><th>Location</th><th>Status</th><th></th></tr></thead>
-          <tbody id="schBody"></tbody>
+          <thead><tr><th>Time</th><th>Name</th><th>Type</th><th>Action / disposition</th><th></th></tr></thead>
+          <tbody id="hcBody"></tbody>
         </table>
       </div>
-      <div class="tbl-scroll" id="schMatrixWrap" style="display:none"></div>
-      <button class="add-btn" id="addSch">+ Add activity</button>
+      <button class="add-btn" id="hcAdd">+ Log heat casualty</button>
     </div>
   </div>
 
@@ -741,6 +661,27 @@
     </div>
   </div>
 
+  <!-- PERSTAT -->
+  <div class="panel">
+    <div class="panel-head"><h2>PERSTAT</h2><span class="hint">assigned &rarr; present</span></div>
+    <div class="panel-body">
+      <div class="panel-sub">Auto-summarized from the <b>Roster</b>. <b>Assigned</b> = accountable people in that group (<b>Departed</b> and <b>Absent</b> drop out); <b>Present</b> = signed <b>In</b> (on ground); <b>Off-site</b> = accounted for but off the property; <b>Gap</b> = still unaccounted (out).</div>
+      <table>
+        <thead><tr><th>Group</th><th>Assigned</th><th>Present</th><th>Off-site</th><th>Gap</th></tr></thead>
+        <tbody id="perBody"></tbody>
+        <tbody>
+          <tr class="total">
+            <td class="row-label">Total</td>
+            <td class="calc" id="perAsg">0</td>
+            <td class="calc" id="perPres">0</td>
+            <td class="calc" id="perOff">0</td>
+            <td class="calc" id="perGap">0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- ROSTER / SIGN-IN -->
   <div class="panel" id="rosterPanel">
     <div class="panel-head">
@@ -773,6 +714,36 @@
         </table>
       </div>
       <button class="add-btn" id="addRoster">+ Add person</button>
+    </div>
+  </div>
+
+  <!-- DAILY SCHEDULE -->
+  <div class="panel">
+    <div class="panel-head">
+      <h2>Daily Schedule</h2>
+      <span class="hint" id="schToday"></span>
+    </div>
+    <div class="panel-body">
+      <div class="panel-sub">Pick a <b>day</b>, then a <b>platoon</b> to view/edit its schedule &mdash; or <b>All</b> for a read-only overview of every platoon side by side. Status advances automatically with the clock (the current row is highlighted). Rename platoons as needed.</div>
+      <div class="picker-label">Day</div>
+      <div class="dtab-row" id="dtabRow"></div>
+      <div class="picker-label">Platoon</div>
+      <div class="ptab-row" id="ptabRow"></div>
+      <div class="ptab-tools" id="ptTools">
+        <span class="fld-k">Platoon name</span>
+        <input id="ptName" class="pt-name-input" placeholder="Platoon name" aria-label="Platoon name">
+        <button class="btn2" id="ptAdd">+ Platoon</button>
+        <button class="btn2" id="ptDel">Remove platoon</button>
+        <button class="btn2" id="ptShared" title="Fill this platoon's whole week with the events the other platoons all do at the same time — flag formations, meals, wake-up, lights out, etc. Good for an HQ/staff platoon.">Fill from shared events</button>
+      </div>
+      <div class="tbl-scroll" id="schTableWrap">
+        <table>
+          <thead><tr><th>Time</th><th>Activity</th><th>Location</th><th>Status</th><th></th></tr></thead>
+          <tbody id="schBody"></tbody>
+        </table>
+      </div>
+      <div class="tbl-scroll" id="schMatrixWrap" style="display:none"></div>
+      <button class="add-btn" id="addSch">+ Add activity</button>
     </div>
   </div>
 
@@ -824,18 +795,45 @@
     </div>
   </div>
 
-  <!-- HEAT CASUALTIES -->
-  <div class="panel" id="hcPanel">
-    <div class="panel-head"><h2>Heat Casualties</h2><div class="head-right"><span class="si-chip" id="hcChip"></span></div></div>
+  <!-- SENSITIVE ITEMS -->
+  <div class="panel" id="siPanel">
+    <div class="panel-head">
+      <h2>Sensitive Items</h2>
+      <div class="head-right">
+        <span class="si-chip" id="siChip"></span>
+      </div>
+    </div>
     <div class="panel-body">
-      <div class="hc-emg"><b>Heat stroke is a medical emergency.</b> Hot skin + confusion, staggering, or collapse &rarr; call <b>911</b>, cool the camper immediately (shade, water, ice to neck/armpits/groin), and notify camp medical. Log every heat case here as it happens.</div>
+      <div class="panel-sub">Signed-out sensitive items and their accountability. On a check, set <b>On Hand</b> to the number physically verified, or press <b>All present</b> to mark every item accounted and stamp the time.</div>
+      <div class="si-tools">
+        <button class="btn2" id="siAllPresent">All present</button>
+        <span class="si-lastcheck" id="siLastCheck"></span>
+      </div>
       <div class="tbl-scroll">
         <table>
-          <thead><tr><th>Time</th><th>Name</th><th>Type</th><th>Action / disposition</th><th></th></tr></thead>
-          <tbody id="hcBody"></tbody>
+          <thead><tr><th>Item</th><th>Signed Out</th><th>On Hand</th><th>Status</th><th></th></tr></thead>
+          <tbody id="siBody"></tbody>
         </table>
       </div>
-      <button class="add-btn" id="hcAdd">+ Log heat casualty</button>
+      <button class="add-btn" id="siAdd">+ Add item</button>
+    </div>
+  </div>
+
+  <!-- GSAs -->
+  <div class="panel" id="gsaPanel">
+    <div class="panel-head">
+      <h2>GSAs</h2>
+      <div class="head-right"><span class="si-chip" id="gsaChip"></span></div>
+    </div>
+    <div class="panel-body">
+      <div class="panel-sub">Government vehicles / equipment. Enter each GSA and <b>who has it</b>. If it&rsquo;s not signed out to anyone, note <b>where it is</b> instead.</div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>GSA</th><th>Assigned To</th><th>Location</th><th></th></tr></thead>
+          <tbody id="gsaBody"></tbody>
+        </table>
+      </div>
+      <button class="add-btn" id="gsaAdd">+ Add GSA</button>
     </div>
   </div>
 
