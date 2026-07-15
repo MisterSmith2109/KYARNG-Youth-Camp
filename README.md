@@ -93,6 +93,10 @@ from a phone, not just a laptop or wall display.
   the PSG phone page) plus anything you add by hand: platoon, priority
   (Routine/Priority/Urgent), item, quantity, notes. Urgent open requests are
   highlighted; mark each **Filled** when handled. Open requests appear in the SITREP.
+- **RFIs & Suggestions** *(new)* — questions (RFIs) and suggestions from the
+  platoons (sent from the PSG phone page). Type a **Response** and set the status
+  to **Answered** or **Closed** — the platoon sees your reply on their phone. Open
+  items are counted on the panel and listed in the Daily AAR.
 - **Copy SITREP** — one-tap plain-text situation report (accountability, who's
   not signed in, PERSTAT, schedule, incidents) ready to paste into an email or chat.
 - **Daily AAR** *(new)* — an after-action / end-of-day summary that auto-fills from
@@ -124,6 +128,9 @@ from a phone, not just a laptop or wall display.
   just see their own.
   - **Supply Request** (item, quantity, priority) → lands in the TOC's Supply
     Requests panel.
+  - **RFI / Suggestion** → ask the TOC a question (RFI) or send a suggestion; it
+    lands in the TOC's RFIs & Suggestions panel, and the TOC's reply shows back on
+    the phone (Open → Answered/Closed).
   - **Report to TOC** → a native quick-report (no Google Form) that posts an
     **incident** (with quick-pick types) or a **heat casualty** (name, type,
     action, with a heat-stroke 911 reminder) directly into the TOC's Incident Log

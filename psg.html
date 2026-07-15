@@ -96,6 +96,7 @@
   .abtn.notes{background:#231e10;border-color:var(--amber);color:#f0d9a6}
   .abtn.medic{grid-column:1/-1;background:#2a1008;border-color:var(--red);color:#ffcaba}
   .abtn.supply{grid-column:1/-1;background:#16202b;border-color:#5a7d8c;color:#cfe3ef}
+  .abtn.rfi{grid-column:1/-1;background:#122423;border-color:#4a8c86;color:#c6e8e4}
   .abtn.roster{background:#1f1a2b;border-color:#8a76a8;color:#dccff0}
   .abtn.docs{background:#1a2118;border-color:var(--olive);color:var(--olive-bright)}
   /* platoon roster list */
@@ -140,6 +141,7 @@
   .mr-tag.incident{background:#2a1410;color:#e6a99c;border:1px solid #5a352e}
   .mr-tag.heat{background:#2a2205;color:var(--amber);border:1px solid #5a4a1a}
   .mr-tag.medic{background:#2a1008;color:#ffcaba;border:1px solid #5a352e}
+  .mr-tag.rfi{background:#122423;color:#a9ded8;border:1px solid #34544f}
   /* report sheet: incident / heat casualty */
   .seg{display:flex;gap:6px;background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:4px;margin-bottom:14px}
   .seg-b{flex:1;background:none;border:none;color:var(--muted);font-weight:700;padding:9px 8px;border-radius:7px;min-height:40px}
@@ -260,6 +262,7 @@
     <button class="abtn notes" id="btnNotes"><span class="ico">🗒️</span>Notes</button>
     <button class="abtn medic" id="btnMedic"><span class="ico">🚑</span>Request Medic</button>
     <button class="abtn supply" id="btnSupply"><span class="ico">📦</span>Supply Request</button>
+    <button class="abtn rfi" id="btnRfi"><span class="ico">❓</span>RFI / Suggestion</button>
     <button class="abtn roster" id="btnRoster"><span class="ico">👥</span>Platoon Roster</button>
     <button class="abtn docs" id="btnDocs"><span class="ico">📁</span>Documents</button>
   </div>
@@ -391,6 +394,24 @@
     </div>
     <button class="primary" id="medSend">Send to medic</button>
     <div style="text-align:center"><button class="linkbtn" id="medCancel">Cancel</button></div>
+  </div>
+</div>
+
+<!-- RFI / suggestion sheet -->
+<div class="overlay hide" id="rfi">
+  <div class="sheet">
+    <h1>RFI / Suggestion</h1>
+    <p>From <b id="rfiPlt">—</b> to the TOC. Ask a question (RFI) or send a suggestion; the TOC can reply and you'll see the response here.</p>
+    <div class="seg">
+      <button class="seg-b on" id="rfiTabRfi" type="button">RFI (question)</button>
+      <button class="seg-b" id="rfiTabSug" type="button">Suggestion</button>
+    </div>
+    <div class="field">
+      <label id="rfiLabel">Your question</label>
+      <textarea id="rfiText" rows="3" placeholder="e.g. Is the pool open during the 1400 block?"></textarea>
+    </div>
+    <button class="primary" id="rfiSend">Send to TOC</button>
+    <div style="text-align:center"><button class="linkbtn" id="rfiCancel">Cancel</button></div>
   </div>
 </div>
 
@@ -804,6 +825,10 @@
     var cls = sl==="resolved"?"filled" : sl==="new"?"open" : "logged"; // New=amber, en route/ack=olive, resolved=green
     return { kind:"medic", tag:"MEDIC", id:r.id, when:r._m||0, time:fmtHm(r.time),
       title:(r.category||"Medical")+(r.location?" · "+r.location:""), sub:r.note||"", urgent:(r.urgency==="Emergency"), status:[cls, s.toUpperCase()] }; }
+  function rfiView(r){ var s=String(r.status||"Open"), sl=s.toLowerCase();
+    var cls = (sl==="answered"||sl==="closed")?"filled":"open"; // Open=amber, Answered/Closed=green
+    return { kind:"rfi", tag:(r.kind==="Suggestion"?"SUGGEST":"RFI"), id:r.id, when:r._m||0, time:fmtHm(r.time),
+      title:(r.text||"—"), sub:(String(r.answer||"").trim()?"Response: "+r.answer:""), urgent:false, status:[cls, s.toUpperCase()] }; }
   function platoonFeed(){
     var b=state.board, plt=state.platoon, out=[], have={}, pend=outboxIds();
     function tagPending(v){ if(pend[v.id]) v.status=["pending","PENDING"]; return v; } // still queued -> PENDING
@@ -812,11 +837,12 @@
       (b.incidents||[]).forEach(function(r){ if(r&&r.id!=null&&r.platoon===plt){ out.push(tagPending(incidentView(r,plt))); have[r.id]=1; } });
       (b.heatCas||[]).forEach(function(r){ if(r&&r.id!=null&&r.platoon===plt){ out.push(tagPending(heatView(r,plt))); have[r.id]=1; } });
       (b.medicRequests||[]).forEach(function(r){ if(r&&r.id!=null&&r.platoon===plt){ out.push(tagPending(medicView(r))); have[r.id]=1; } });
+      (b.rfis||[]).forEach(function(r){ if(r&&r.id!=null&&r.platoon===plt){ out.push(tagPending(rfiView(r))); have[r.id]=1; } });
     }
     // safety net: queued items not (yet) reflected in the board copy — show them as PENDING
     loadOutbox().forEach(function(x){
       if(!x||have[x.id]||!x.rec||(x.rec.platoon&&x.rec.platoon!==plt)) return;
-      var v = x.kind==="incident"?incidentView(x.rec,plt) : x.kind==="heat"?heatView(x.rec,plt) : x.kind==="medic"?medicView(x.rec) : supplyView(x.rec);
+      var v = x.kind==="incident"?incidentView(x.rec,plt) : x.kind==="heat"?heatView(x.rec,plt) : x.kind==="medic"?medicView(x.rec) : x.kind==="rfi"?rfiView(x.rec) : supplyView(x.rec);
       v.status=["pending","PENDING"]; out.push(v);
     });
     out.sort(function(a,b){ return (b.when||0)-(a.when||0); }); // newest first
@@ -956,6 +982,40 @@
   $("medCancel").addEventListener("click",closeMedic);
   $("medSend").addEventListener("click",sendMedic);
   $("medUrg").addEventListener("change",function(){ $("med911").classList.toggle("hide", this.value!=="Emergency"); });
+
+  // ---------- RFI / suggestion (routes to the TOC's RFIs & Suggestions panel) ----------
+  var rfiKind="RFI";
+  function setRfiKind(k){
+    rfiKind=(k==="Suggestion")?"Suggestion":"RFI";
+    $("rfiTabRfi").classList.toggle("on",rfiKind==="RFI");
+    $("rfiTabSug").classList.toggle("on",rfiKind==="Suggestion");
+    $("rfiLabel").textContent=rfiKind==="RFI"?"Your question":"Your suggestion";
+    $("rfiText").placeholder=rfiKind==="RFI"?"e.g. Is the pool open during the 1400 block?":"e.g. Add a shade tent at the archery range";
+  }
+  function openRfi(){
+    if(!state.url){ toast("Set up sync first — tap Settings.",true); return; }
+    $("rfiPlt").textContent=state.platoon||"your platoon"; setRfiKind("RFI");
+    $("rfiText").value=""; $("rfiText").style.borderColor="";
+    $("rfi").classList.remove("hide"); setTimeout(function(){ $("rfiText").focus(); },50);
+  }
+  function closeRfi(){ $("rfi").classList.add("hide"); }
+  function sendRfi(){
+    var text=$("rfiText").value.trim();
+    if(!text){ $("rfiText").focus(); $("rfiText").style.borderColor="var(--red)"; return; }
+    if(!state.url){ toast("Not connected — can't send.",true); return; }
+    if(!state.board){ toast("Still loading the board — try again in a moment.",true); return; }
+    var now=Date.now(), c=campNow();
+    var rec={ id:"rf"+now.toString(36)+Math.random().toString(36).slice(2,6),
+      platoon:state.platoon||"", kind:rfiKind, text:text, status:"Open", answer:"", time:pad(c.h)+pad(c.m), _m:now };
+    var board=snapshotWith("rfis", rec); state.board=board;
+    queueSend(board, rec, "rfi", rfiKind);
+    closeRfi(); toast(rfiKind+" sent to TOC ✓");
+  }
+  $("btnRfi").addEventListener("click",openRfi);
+  $("rfiCancel").addEventListener("click",closeRfi);
+  $("rfiSend").addEventListener("click",sendRfi);
+  $("rfiTabRfi").addEventListener("click",function(){ setRfiKind("RFI"); });
+  $("rfiTabSug").addEventListener("click",function(){ setRfiKind("Suggestion"); });
   $("repTabInc").addEventListener("click",function(){ setReportMode("inc"); });
   $("repTabHeat").addEventListener("click",function(){ setReportMode("heat"); });
   $("repHeatType").addEventListener("change",function(){ $("repHsWarn").classList.toggle("hide", this.value!=="Heat stroke"); });
