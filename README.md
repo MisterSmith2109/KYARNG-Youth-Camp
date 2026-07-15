@@ -37,7 +37,11 @@ from a phone, not just a laptop or wall display.
   (Campers / Staff·Support / Volunteers) with their group and last-seen time, and
   absent/excused people are shown separately. A **head-count check** lets you
   enter the number of heads counted on the ground and reconciles it against who's
-  signed In (flagging "+2 more on ground" or "2 short").
+  signed In (flagging "+2 more on ground" or "2 short"). A **By platoon** rollup
+  *(new)* breaks accountability out per platoon — each shows **signed-in / total**
+  and how many are still out — grouped from each person's roster *Group*, with
+  renamed-platoon aliases folded in, plus an *Unassigned* bucket for anyone whose
+  group doesn't match a platoon.
 - **PERSTAT** — personnel counts by group (assigned vs. present). Works two ways:
   **type the counts in** directly, or let it fill from the roster. Any group that
   has people on the sign-in roster is counted from it automatically; groups with
@@ -99,9 +103,10 @@ from a phone, not just a laptop or wall display.
   activity and location, the **heat flag + water/work-rest guidance** (with an
   optional work/rest timer), a **Notes** button (a private, on-phone notepad for
   AAR comments and reminders — timestamped, saved offline, with *copy all* to
-  paste into an AAR later), a **Documents** button (tap to open reference files —
-  camp map, cadences, emergency/contingency plan — served from the project's
-  `docs/` folder and listed from `docs/manifest.json`), a **Platoon Roster**
+  paste into an AAR later), a **Documents** button (tap to open reference files
+  served from the project's `docs/` folder and listed from `docs/manifest.json`
+  — keep only non-sensitive material here, since the folder is publicly served),
+  a **Platoon Roster**
   button (their platoon's people and live sign-in status, built from the TOC
   sign-in roster — a person's platoon comes from their roster *group* if they're
   a Camper/PSG/APSG, and anyone in another role such as Staff/Support counts as

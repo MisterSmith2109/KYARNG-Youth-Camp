@@ -416,6 +416,14 @@
   tr.sr-urgent td{background:rgba(196,60,45,.12)}
   tr.sr-filled{opacity:.5}
   /* Accountability · Formation view */
+  .fm-plt-wrap{margin:14px 0 4px}
+  .fm-plt{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:8px;margin-top:6px}
+  .pa-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:8px 11px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line-soft);border-left:3px solid var(--green)}
+  .pa-row.pa-warn{border-left-color:var(--amber)}
+  .pa-row.pa-empty{border-left-color:var(--line)}
+  .pa-name{font-weight:700;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .pa-nums{font-family:var(--mono);font-size:13px;color:var(--muted);white-space:nowrap;flex:none}
+  .pa-nums b{color:var(--ink);font-size:15px} .pa-out{color:var(--amber);font-weight:700}
   .fm-banner{border-radius:8px;border:1px solid var(--line);padding:14px 16px;margin-bottom:14px;display:flex;flex-direction:column;gap:3px;background:var(--panel-2)}
   .fm-banner.ok{background:var(--green);color:#0f1a0e;border-color:var(--green)}
   .fm-banner.warn{background:var(--red);color:#2a0d08;border-color:var(--red)}
@@ -693,6 +701,10 @@
           <div class="fm-h"><span>Absent / excused</span><span id="fmAbsN"></span></div>
           <div class="fm-list fm-dim" id="fmAbs"></div>
         </div>
+      </div>
+      <div class="fm-plt-wrap">
+        <div class="fm-h"><span>By platoon</span><span id="fmPltN"></span></div>
+        <div class="fm-plt" id="fmPlt"></div>
       </div>
       <div class="fm-check">
         <span class="fm-check-k">Head-count check</span>
@@ -3922,6 +3934,36 @@ var qrcode = function() {
   }
 
   // ---------- accountability / formation view (derived from the roster) ----------
+  // Renamed platoons whose campers are still grouped under the old name on the roster (mirrors psg.html).
+  const PLATOON_ALIASES={ "g-flex":["golf"], "pink power ranger":["pink power rangers"] };
+  function platoonMatchSet(name){ const k=String(name||"").trim().toLowerCase(); const s=[k];
+    if(PLATOON_ALIASES[k]) PLATOON_ALIASES[k].forEach(a=>s.push(String(a).trim().toLowerCase())); return s; }
+  function renderPlatoonAccount(){
+    const box=$("fmPlt"); if(!box) return;
+    const roster=state.roster||[];
+    const plats=(state.platoons||[]).map(p=>p&&p.name).filter(Boolean);
+    const matched={};
+    const rows=[];
+    plats.forEach(name=>{
+      const set=platoonMatchSet(name);
+      let inN=0,tot=0,absN=0,outN=0;
+      roster.forEach((r,i)=>{ const g=String(r.group||"").trim().toLowerCase();
+        if(set.indexOf(g)>=0){ matched[i]=1; tot++; if(r.status==="In") inN++; else if(r.status==="Absent") absN++; else outN++; } });
+      if(tot>0) rows.push({name:name, inN:inN, tot:tot, absN:absN, outN:outN});
+    });
+    let uIn=0,uTot=0,uAbs=0,uOut=0;
+    roster.forEach((r,i)=>{ if(!matched[i]){ uTot++; if(r.status==="In") uIn++; else if(r.status==="Absent") uAbs++; else uOut++; } });
+    if(uTot>0) rows.push({name:"Unassigned", inN:uIn, tot:uTot, absN:uAbs, outN:uOut});
+    if($("fmPltN")) $("fmPltN").textContent = rows.length ? String(rows.length)+(rows.length===1?" platoon":" platoons") : "";
+    if(!rows.length){ box.innerHTML='<div class="fm-empty">No one on the roster yet — set each person&rsquo;s Group to their platoon.</div>'; return; }
+    box.innerHTML=rows.map(x=>{
+      const cls = x.outN>0 ? "pa-warn" : (x.tot? "" : "pa-empty");
+      return '<div class="pa-row '+cls+'"><span class="pa-name">'+esc(x.name)+'</span>'+
+        '<span class="pa-nums"><b>'+x.inN+'</b>/'+x.tot+' in'+
+        (x.outN?' · <span class="pa-out">'+x.outN+' out</span>':'')+
+        (x.absN?' · '+x.absN+' exc':'')+'</span></div>';
+    }).join("");
+  }
   function roleGroupLabel(role){
     for(let k=0;k<PERSTAT_GROUPS.length;k++){ if(PERSTAT_GROUPS[k].roles.indexOf(role)>-1) return PERSTAT_GROUPS[k].label; }
     return "Other";
@@ -3983,6 +4025,7 @@ var qrcode = function() {
       }
     }
     fmDelta();
+    renderPlatoonAccount(); // per-platoon rollup
   }
   // Head-count reconciliation: compare heads counted on the ground to who's signed In.
   function fmDelta(){
@@ -4361,12 +4404,12 @@ var qrcode = function() {
   $("addSch").addEventListener("click",()=>{ const s=curSched(); if(!s) return; s.push({time:"",activity:"",loc:"",status:"Upcoming"}); renderSchedule(); save(); });
 
   // platoon controls
-  $("ptName").addEventListener("input",e=>{ const cp=curPlatoon(); if(!cp) return; cp.name=e.target.value; renderPtabs(); save(); });
+  $("ptName").addEventListener("input",e=>{ const cp=curPlatoon(); if(!cp) return; cp.name=e.target.value; renderPtabs(); renderPlatoonAccount(); save(); });
   $("ptAdd").addEventListener("click",()=>{
     state.platoons=state.platoons||[];
     state.platoons.push({name:"Platoon "+(state.platoons.length+1), sched:emptyWeek()});
     state.activePlatoon=state.platoons.length-1;
-    renderPtabs(); renderSchedule(); $("ptName").focus(); save();
+    renderPtabs(); renderSchedule(); renderPlatoonAccount(); $("ptName").focus(); save();
   });
   // Inline two-click confirm (native confirm()/alert() are blocked in sandboxed previews).
   let ptDelArmed=false, ptDelTimer=null;
@@ -4383,7 +4426,7 @@ var qrcode = function() {
     resetPtDel();
     state.platoons.splice(state.activePlatoon,1);
     if(state.activePlatoon>=state.platoons.length) state.activePlatoon=state.platoons.length-1;
-    renderPtabs(); renderSchedule(); save();
+    renderPtabs(); renderSchedule(); renderPlatoonAccount(); save();
   });
   // Switching platoons/days cancels a pending delete confirmation.
   $("ptabRow").addEventListener("click",()=>{ if(ptDelArmed) resetPtDel(); });
