@@ -555,7 +555,57 @@
   .sync-dot{width:9px;height:9px;border-radius:50%;background:var(--black-status);flex:none}
   .sync-dot.on{background:var(--green);box-shadow:0 0 7px var(--green)}
   @media print{ #syncPanel{display:none} }
+
+  /* ================= NEO THEME — futuristic glass HUD (opt-in via the toolbar toggle) ================= */
+  html[data-theme="neo"]{
+    --bg:#060910;
+    --panel:rgba(16,25,40,.62);
+    --panel-2:rgba(120,205,235,.07);
+    --line:rgba(120,210,235,.22);
+    --line-soft:rgba(120,210,235,.11);
+    --ink:#eaf7ff;
+    --muted:#82a3ba;
+    --olive:#22b8c9;          /* accent — teal */
+    --olive-bright:#57e6ff;   /* accent — bright cyan */
+    --amber:#ffce4a;
+    --green:#39efab;          /* mint */
+    --red:#ff5d74;
+    --steel:#5cc7ff;
+    --black-status:#5c6c7a;
+  }
+  html[data-theme="neo"] body{ background:#060910; }
+  html[data-theme="neo"] body::before{ content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+    background:
+      radial-gradient(1200px 720px at 10% -10%, rgba(40,190,215,.16), transparent 60%),
+      radial-gradient(1000px 720px at 112% 8%, rgba(57,239,171,.10), transparent 55%),
+      radial-gradient(900px 900px at 50% 122%, rgba(70,120,255,.10), transparent 60%),
+      linear-gradient(180deg,#070d17,#04070d); }
+  html[data-theme="neo"] body::after{ content:"";position:fixed;inset:0;z-index:-1;pointer-events:none;opacity:.45;
+    background-image:linear-gradient(rgba(120,210,235,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(120,210,235,.05) 1px,transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(125% 90% at 50% 0%,#000 52%,transparent 100%);
+            mask-image:radial-gradient(125% 90% at 50% 0%,#000 52%,transparent 100%); }
+  html[data-theme="neo"] .panel,html[data-theme="neo"] .wx-panel,html[data-theme="neo"] .tile,html[data-theme="neo"] .meta{
+    -webkit-backdrop-filter:blur(9px);backdrop-filter:blur(9px);border-color:var(--line);border-radius:14px;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.05),0 10px 34px -20px rgba(0,0,0,.95); }
+  html[data-theme="neo"] .panel-head,html[data-theme="neo"] .wx-head{ background:linear-gradient(180deg,rgba(120,210,235,.09),rgba(120,210,235,0)); }
+  html[data-theme="neo"] .panel-head h2,html[data-theme="neo"] .wx-head h2{ color:var(--olive-bright);text-shadow:0 0 14px rgba(87,230,255,.35) }
+  html[data-theme="neo"] .panel-head h2::before,html[data-theme="neo"] .wx-head h2::before{ box-shadow:0 0 10px var(--olive-bright) }
+  html[data-theme="neo"] .board-head{ border-bottom-color:var(--olive) }
+  html[data-theme="neo"] .eyebrow,html[data-theme="neo"] .dtg .z{ text-shadow:0 0 18px rgba(87,230,255,.4) }
+  html[data-theme="neo"] .tile .t-val{ text-shadow:0 0 22px rgba(87,230,255,.30) }
+  html[data-theme="neo"] .tile::before{ box-shadow:0 0 18px 0 var(--accent) }
+  html[data-theme="neo"] .ps-hero{ background:linear-gradient(180deg,rgba(87,230,255,.06),rgba(0,0,0,0)) }
+  html[data-theme="neo"] .ps-hero-pct span{ text-shadow:0 0 22px rgba(87,230,255,.35) }
+  html[data-theme="neo"] .ps-bar{ box-shadow:0 0 16px -6px rgba(87,230,255,.55) }
+  html[data-theme="neo"] .si-chip,html[data-theme="neo"] .fm-h>span:last-child{ background:rgba(120,210,235,.09) }
+  html[data-theme="neo"] .btn,html[data-theme="neo"] .btn2,html[data-theme="neo"] .add-btn{ background:rgba(120,210,235,.06) }
+  html[data-theme="neo"] .btn:hover,html[data-theme="neo"] .btn2:hover{ border-color:var(--olive-bright);box-shadow:0 0 14px -4px var(--olive-bright) }
+  html[data-theme="neo"] input,html[data-theme="neo"] select,html[data-theme="neo"] textarea{ background:rgba(9,15,25,.6);border-color:var(--line-soft) }
+  html[data-theme="neo"] #startOverlay{ background:rgba(4,7,13,.97) }
+  #btnTheme{ min-width:118px }
 </style>
+<script>try{if(localStorage.getItem("kyarng-camp-theme")==="neo")document.documentElement.setAttribute("data-theme","neo");}catch(e){}</script>
 </head>
 <body>
  
@@ -975,6 +1025,7 @@
     <button class="btn" id="btnLoad" title="Load a board file saved on another computer">Load file</button>
     <input type="file" id="boardFile" accept=".json,application/json" style="display:none">
     <button class="btn" id="btnBackups" title="Automatic local snapshots of this board — restore if something gets wiped">Backups</button>
+    <button class="btn" id="btnTheme" title="Switch between the Field look and the futuristic Neo look">◐ Neo look</button>
     <button class="btn danger" id="btnReset">Reset board</button>
   </div>
 
@@ -4978,6 +5029,14 @@ var qrcode = function() {
   });
 
   $("btnPrint").addEventListener("click",()=>window.print());
+  // theme toggle: Field (default) <-> Neo (futuristic glass HUD); persisted per device
+  (function(){ const KEY="kyarng-camp-theme"; const root=document.documentElement;
+    const lbl=()=>{ const b=$("btnTheme"); if(b) b.textContent=(root.getAttribute("data-theme")==="neo")?"◑ Field look":"◐ Neo look"; };
+    lbl();
+    const b=$("btnTheme"); if(b) b.addEventListener("click",()=>{ const neo=root.getAttribute("data-theme")==="neo";
+      if(neo) root.removeAttribute("data-theme"); else root.setAttribute("data-theme","neo");
+      try{ localStorage.setItem(KEY, neo?"field":"neo"); }catch(e){} lbl(); });
+  })();
 
   // ---------- board file: portable save / load between computers ----------
   function saveFile(){
