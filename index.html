@@ -826,7 +826,7 @@
   <div class="panel">
     <div class="panel-head"><h2>Incident Report Log</h2><span class="hint">each entry = 1 report</span></div>
     <div class="panel-body">
-      <div class="panel-sub">Log incidents by hand, or auto-import responses from your Google Form. Paste the form&rsquo;s <b>published CSV link</b> (in the sheet: File &rarr; Share &rarr; Publish to web &rarr; the responses tab &rarr; Comma-separated values). New responses drop in automatically. Deleting an imported entry keeps it from coming back. The <b>Medic</b> column is auto-filled from the form&rsquo;s medic / &ldquo;your name&rdquo; field &mdash; the medic who submitted the report.</div>
+      <div class="panel-sub">Log incidents by hand, or auto-import responses from your Google Form. Paste the form&rsquo;s <b>published CSV link</b> (in the sheet: File &rarr; Share &rarr; Publish to web &rarr; the responses tab &rarr; Comma-separated values). New responses drop in automatically. Deleting an imported entry keeps it from coming back. The <b>Medic</b> column is auto-filled from the form&rsquo;s <b>&ldquo;Name of Person Completing Report&rdquo;</b> field &mdash; the medic who submitted the report.</div>
       <div class="feed-row">
         <input id="feedUrl" placeholder="Published responses CSV link">
         <button class="btn2" id="feedConnect">Connect</button>
@@ -4558,11 +4558,16 @@ var qrcode = function() {
     const rows=parseCSV(txt);
     if(rows.length<2){ feedStatus("no responses yet · "+hhmmLocal()); return 0; }
     const H=rows[0].map(h=>String(h||"").toLowerCase().trim());
-    const col=(...names)=>{ for(const n of names){ const i=H.findIndex(h=>h.indexOf(n)>-1); if(i>-1) return i; } return -1; };
+    // Each header column feeds at most one field; once claimed it can't be re-matched,
+    // so e.g. "Name of Person Completing Report?" can't also be read as the camper name.
+    const used={};
+    const col=(...names)=>{ for(const n of names){ const i=H.findIndex((h,idx)=>!used[idx]&&h.indexOf(n)>-1); if(i>-1){ used[i]=1; return i; } } return -1; };
+    // Medic = the person who completed the report (form column B). Claim it first.
+    const iBy=col("name of person completing","person completing report","completing report","person completing","name of person completing report","name of medic","medic name","completed by","submitted by","reported by","your name");
     const iTS=col("timestamp"),
           iDate=col("date of incident","date of","date"),
           iTime=col("time of incident","time of","time"),
-          iName=col("camper involved","person involved","person/camper","name of person","camper","name"),
+          iName=col("camper involved","person involved","person/camper","name of camper","name of person","camper","name"),
           iAge=col("age"),
           iGroup=col("platoon","camp / group","group","unit","squad"),
           iType=col("type of incident","type","nature","category"),
@@ -4571,8 +4576,7 @@ var qrcode = function() {
           iMed=col("medical attention required","medical attention","medical","injury"),
           iDesc=col("description","what happened","details","describe","remarks"),
           iAct=col("action taken","action","response"),
-          iPar=col("parent notified","contact notified","parent/guardian","guardian","notified"),
-          iBy=col("medic name","medic","reported by","submitted by","notified by","completed by","your name","name of medic");
+          iPar=col("parent notified","contact notified","parent/guardian","guardian","notified");
     const get=(r,i)=>(i>-1&&r[i]!=null)?String(r[i]).trim():"";
     const imported=new Set(state.importedKeys||[]);
     let added=0;
