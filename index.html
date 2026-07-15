@@ -792,6 +792,21 @@
     </div>
   </div>
 
+  <!-- RFIs & SUGGESTIONS -->
+  <div class="panel" id="rfiPanel">
+    <div class="panel-head"><h2>RFIs &amp; Suggestions</h2><div class="head-right"><span class="si-chip" id="rfiChip"></span></div></div>
+    <div class="panel-body">
+      <div class="panel-sub">Questions (RFIs) and suggestions from the platoons (sent from the PSG phone page), plus anything you add here. Type a <b>Response</b> and set the status to <b>Answered</b> or <b>Closed</b> &mdash; the platoon sees it on their phone.</div>
+      <div class="tbl-scroll">
+        <table>
+          <thead><tr><th>Time</th><th>Platoon</th><th>Type</th><th>Message</th><th>Status</th><th>Response</th><th></th></tr></thead>
+          <tbody id="rfiBody"></tbody>
+        </table>
+      </div>
+      <button class="add-btn" id="rfiAdd">+ Add item</button>
+    </div>
+  </div>
+
   <!-- HEAT CASUALTIES -->
   <div class="panel" id="hcPanel">
     <div class="panel-head"><h2>Heat Casualties</h2><div class="head-right"><span class="si-chip" id="hcChip"></span></div></div>
@@ -3238,6 +3253,7 @@ var qrcode = function() {
     gsas:[],
     heatCas:[],
     supplyRequests:[],
+    rfis:[],
     roster:[],
     activeDay:0,
     activePlatoon:-1,
@@ -3324,7 +3340,7 @@ var qrcode = function() {
   let syncUrl=""; try{ syncUrl=localStorage.getItem(SYNC_KEY)||""; }catch(e){}
   let syncPollTimer=null, syncPushTimer=null, syncLastRev=-1, syncApplying=false, syncConnected=false, syncPushPending=false;
   // --- safe-merge metadata (mirrors the rules in sync/Code.gs) ---
-  const SYNC_LISTS=["roster","incidents","sensitive","gsas","heatCas","supplyRequests"];
+  const SYNC_LISTS=["roster","incidents","sensitive","gsas","heatCas","supplyRequests","rfis"];
   const SYNC_SECTIONS={
     header:["campName","day","oic","nco","wx","wxCoords","volLabel","vol","gsaLabel"],
     wbgt:["wbgt","wbgtAuto"],
@@ -3888,6 +3904,34 @@ var qrcode = function() {
     const chip=$("supplyChip"); if(chip) chip.textContent = list.length ? (open+" open"+(urg?" · "+urg+" urgent":"")) : "none";
   }
 
+  // ---------- render RFIs & suggestions ----------
+  const RFI_KIND=["RFI","Suggestion"], RFI_ST=["Open","Answered","Closed"];
+  function renderRfis(){
+    const b=$("rfiBody"); if(!b) return; b.innerHTML="";
+    const list=state.rfis||[];
+    if(list.length===0){
+      b.innerHTML='<tr><td colspan="7" class="inc-empty">No RFIs or suggestions. Platoons can send them from the PSG page.</td></tr>';
+    }else{
+      list.forEach((r,i)=>{
+        const tr=document.createElement("tr");
+        if(r.status==="Closed"||r.status==="Answered") tr.className="sr-filled"; else if(r.kind==="RFI") tr.className="sr-urgent";
+        const kOpts=RFI_KIND.map(x=>'<option'+(r.kind===x?" selected":"")+'>'+x+'</option>').join("");
+        const stOpts=RFI_ST.map(x=>'<option'+(r.status===x?" selected":"")+'>'+x+'</option>').join("");
+        tr.innerHTML=
+          '<td><input class="t" data-rfi="'+i+'" data-f="time" value="'+esc(r.time)+'" placeholder="time"></td>'+
+          '<td><input class="row-label" data-rfi="'+i+'" data-f="platoon" value="'+esc(r.platoon)+'" placeholder="platoon"></td>'+
+          '<td><select class="hc-type" data-rfi="'+i+'" data-f="kind">'+kOpts+'</select></td>'+
+          '<td><input data-rfi="'+i+'" data-f="text" value="'+esc(r.text)+'" placeholder="question / suggestion"></td>'+
+          '<td><select class="hc-type" data-rfi="'+i+'" data-f="status">'+stOpts+'</select></td>'+
+          '<td><input data-rfi="'+i+'" data-f="answer" value="'+esc(r.answer)+'" placeholder="response to the platoon"></td>'+
+          '<td><button class="icon-btn" data-delrfi="'+i+'" title="Remove">×</button></td>';
+        b.appendChild(tr);
+      });
+    }
+    const open=list.filter(r=>r.status==="Open").length, rfiN=list.filter(r=>r.status==="Open"&&r.kind==="RFI").length;
+    const chip=$("rfiChip"); if(chip) chip.textContent = list.length ? (open+" open"+(rfiN?" · "+rfiN+" RFI":"")) : "none";
+  }
+
   // ---------- render incidents ----------
   function renderInc(){
     const b=$("incBody"); b.innerHTML="";
@@ -4259,7 +4303,7 @@ var qrcode = function() {
     });
   }
 
-  function renderAll(){ renderTiles(); renderPer(); renderSensitive(); renderGsa(); renderHeatCas(); renderSupply(); renderInc(); renderRoster(); renderDtabs(); renderPtabs(); renderSchedule(); renderHeat(); }
+  function renderAll(){ renderTiles(); renderPer(); renderSensitive(); renderGsa(); renderHeatCas(); renderSupply(); renderRfis(); renderInc(); renderRoster(); renderDtabs(); renderPtabs(); renderSchedule(); renderHeat(); }
  
   // ---------- events ----------
   // header + tile fields
@@ -4290,12 +4334,14 @@ var qrcode = function() {
     else if(t.dataset.gsa!=null){ const g=state.gsas[+t.dataset.gsa]; g[t.dataset.f]=t.value; if(t.dataset.f==="holder"){ renderTiles(); const c=$("gsaChip"); if(c){ const l=state.gsas; c.textContent=l.filter(x=>String(x.holder||"").trim()).length+" out · "+l.length+" total"; } } save(); }
     else if(t.dataset.hc!=null){ const c=state.heatCas[+t.dataset.hc]; if(c){ c[t.dataset.f]=t.value; save(); } }
     else if(t.dataset.sr!=null){ const c=state.supplyRequests[+t.dataset.sr]; if(c){ c[t.dataset.f]=t.value; save(); } }
+    else if(t.dataset.rfi!=null){ const c=state.rfis[+t.dataset.rfi]; if(c){ c[t.dataset.f]=t.value; save(); } }
   });
   document.body.addEventListener("change",e=>{
     const t=e.target;
     if(t.dataset.ros!=null){ const f=t.dataset.f; const r=state.roster[+t.dataset.ros]; r[f]=t.value; if(f==="status") r.last=nowDTG(); renderRoster(); renderTiles(); save(); return; }
     else if(t.dataset.hc!=null && t.dataset.f==="type"){ const c=state.heatCas[+t.dataset.hc]; if(c){ c.type=t.value; renderHeatCas(); save(); } return; }
     else if(t.dataset.sr!=null && (t.dataset.f==="priority"||t.dataset.f==="status")){ const c=state.supplyRequests[+t.dataset.sr]; if(c){ c[t.dataset.f]=t.value; renderSupply(); save(); } return; }
+    else if(t.dataset.rfi!=null && (t.dataset.f==="kind"||t.dataset.f==="status")){ const c=state.rfis[+t.dataset.rfi]; if(c){ c[t.dataset.f]=t.value; renderRfis(); save(); } return; }
   });
   // delegated delete + add
   document.body.addEventListener("click",e=>{
@@ -4305,6 +4351,7 @@ var qrcode = function() {
     else if(t.dataset.delgsa!=null){ state.gsas.splice(+t.dataset.delgsa,1); renderGsa(); renderTiles(); save(); }
     else if(t.dataset.delhc!=null){ state.heatCas.splice(+t.dataset.delhc,1); renderHeatCas(); save(); }
     else if(t.dataset.delsr!=null){ state.supplyRequests.splice(+t.dataset.delsr,1); renderSupply(); save(); }
+    else if(t.dataset.delrfi!=null){ state.rfis.splice(+t.dataset.delrfi,1); renderRfis(); save(); }
     else if(t.dataset.delros!=null){ state.roster.splice(+t.dataset.delros,1); renderRoster(); renderTiles(); save(); }
     else if(t.dataset.delsch!=null){ const s=curSched(); if(s) s.splice(+t.dataset.delsch,1); renderSchedule(); save(); }
     else if(t.dataset.cancelsch!=null){ const s=curSched(); if(s&&s[+t.dataset.cancelsch]){ const r=s[+t.dataset.cancelsch]; r.canceled=!r.canceled; } renderSchedule(); save(); }
@@ -4316,6 +4363,7 @@ var qrcode = function() {
   $("gsaAdd").addEventListener("click",()=>{ state.gsas.push({id:newId(),name:"",holder:"",loc:""}); renderGsa(); renderTiles(); save(); });
   $("hcAdd").addEventListener("click",()=>{ state.heatCas.push({id:newId(),time:hhmmLocal(),name:"",type:"Heat exhaustion",action:""}); renderHeatCas(); save(); });
   $("supplyAdd").addEventListener("click",()=>{ state.supplyRequests.push({id:newId(),time:hhmmLocal(),platoon:"",priority:"Routine",item:"",qty:"",notes:"",status:"Open"}); renderSupply(); save(); });
+  $("rfiAdd").addEventListener("click",()=>{ state.rfis.push({id:newId(),time:hhmmLocal(),platoon:"",kind:"RFI",text:"",status:"Open",answer:""}); renderRfis(); save(); });
   $("wrStart").addEventListener("click",wrStart);
   $("wrStop").addEventListener("click",wrStop);
   $("wrSkip").addEventListener("click",()=>{ if(wr.running){ wrAdvance(); renderWR(); } });
@@ -4617,18 +4665,24 @@ var qrcode = function() {
       else line("   No medic requests."); }
     line("");
 
+    { const rf=state.rfis||[]; const openR=rf.filter(r=>r.status==="Open").length;
+      line("6. RFIs & SUGGESTIONS ("+rf.length+(rf.length?" · "+openR+" open":"")+")");
+      if(rf.length) rf.forEach(r=>line("   "+(String(r.time||"").trim()||"----")+" ["+(r.kind||"RFI")+"] "+(String(r.platoon||"").trim()||"?")+": "+(String(r.text||"").trim()||"(none)")+" — "+(r.status||"Open")+(String(r.answer||"").trim()?" · resp: "+r.answer.trim():"")));
+      else line("   No RFIs or suggestions."); }
+    line("");
+
     { const gl=state.gsas||[], glOut=gl.filter(g=>String(g.holder||"").trim()).length;
       const siWith=(state.sensitive||[]).filter(it=>(+it.qty||0)>0);
-      line("6. EQUIPMENT");
+      line("7. EQUIPMENT");
       line("   "+String(state.gsaLabel||"GSAs").toUpperCase()+": "+gl.length+(gl.length?" ("+glOut+" signed out)":""));
       if(siWith.length){ const siOK=siWith.every(it=>(+it.oh||0)===(+it.qty||0)), siQ=siWith.reduce((a,it)=>a+(+it.qty||0),0);
         line("   SENSITIVE ITEMS: "+(siOK?"ALL ACCOUNTED ("+siQ+")":"DISCREPANCY")+(state.siCheck?" · last check "+state.siCheck:"")); } }
     line("");
 
-    line("7. SIGNIFICANT ACTIVITIES / EVENTS"); line("   - "); line("");
-    line("8. SUSTAIN (what went well)"); line("   - "); line("");
-    line("9. IMPROVE (what to fix / do differently)"); line("   - "); line("");
-    line("10. RECOMMENDATIONS / REMARKS"); line("   - "); line("");
+    line("8. SIGNIFICANT ACTIVITIES / EVENTS"); line("   - "); line("");
+    line("9. SUSTAIN (what went well)"); line("   - "); line("");
+    line("10. IMPROVE (what to fix / do differently)"); line("   - "); line("");
+    line("11. RECOMMENDATIONS / REMARKS"); line("   - "); line("");
     line("Prepared by: ______________________________");
     return L.join("\n");
   }
